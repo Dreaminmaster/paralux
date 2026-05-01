@@ -13,182 +13,132 @@ body{
   height:100vh;width:100vw;
   display:flex;align-items:center;justify-content:center;
 }
-
-/* Background */
-.bg{
-  position:fixed;inset:-30%;
-  background:
-    radial-gradient(ellipse at 30% 35%, rgba(40,70,180,0.08) 0%, transparent 55%),
-    radial-gradient(ellipse at 75% 65%, rgba(140,50,200,0.06) 0%, transparent 45%),
-    #08080f;
-  z-index:0;
-}
-.bg-grid{
-  position:fixed;inset:-30%;
-  background-image:
-    linear-gradient(rgba(60,100,200,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(60,100,200,0.03) 1px, transparent 1px);
-  background-size:50px 50px;
-  z-index:0;
-}
-
-/* Viewport */
-.viewport{
-  position:fixed;inset:0;
-  perspective:800px;
-  perspective-origin:50% 50%;
-  display:flex;align-items:center;justify-content:center;
-}
-
-/* ===== THE BOX ===== */
-.box{
-  transform-style:preserve-3d;
-  position:relative;
-  width:min(85vw, 650px);
-  height:min(70vh, 480px);
-  transition:transform 0.06s ease-out;
-}
-
-/* Front face — main screen */
-.face{
-  position:absolute;
-  backface-visibility:hidden;
-  background:rgba(10,12,28,0.94);
-  border:1px solid rgba(255,255,255,0.06);
-  overflow:hidden;
-}
-.face::after{
-  content:'';position:absolute;top:0;left:20px;right:20px;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(100,180,255,0.12),transparent);
-}
-
-.front{
-  width:100%;height:100%;
-  transform:translateZ(0);
-  border-radius:16px;
-  padding:28px 32px;
-  box-shadow:
-    0 30px 80px rgba(0,0,0,0.5),
-    0 0 60px rgba(40,80,200,0.05);
-}
-.front .nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
-.front .logo{font-size:16px;font-weight:700}
-.front .links{display:flex;gap:16px}
-.front .links a{color:rgba(255,255,255,0.25);text-decoration:none;font-size:12px}
-.front h1{font-size:clamp(22px,4vw,38px);font-weight:700;line-height:1.15;margin-bottom:8px}
-.front .sub{font-size:clamp(12px,1.5vw,15px);color:rgba(255,255,255,0.25);margin-bottom:16px}
-.front .line{width:50px;height:2px;background:linear-gradient(90deg,rgba(80,160,255,0.3),transparent);margin-bottom:16px}
-.front .desc{font-size:clamp(11px,1.3vw,13px);color:rgba(255,255,255,0.16);line-height:1.7;margin-bottom:20px;max-width:450px}
-.btns{display:flex;gap:8px;flex-wrap:wrap}
-.btn{padding:7px 18px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:none}
-.btn-p{background:rgba(80,160,255,0.1);color:#5599ff;border:1px solid rgba(80,160,255,0.25)}
-.btn-g{background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.08)}
-
-/* Left face — code card */
-.left{
-  width:300px;height:100%;
-  left:0;top:0;
-  transform-origin:left center;
-  transform:rotateY(-90deg);
-  border-radius:0;
-  padding:24px 20px;
-  font-family:'SF Mono','Fira Code',monospace;
-  font-size:11px;line-height:1.9;
-  box-shadow:-10px 0 30px rgba(0,0,0,0.3);
-  border-left:none;
-  border-right:1px solid rgba(255,255,255,0.04);
-}
-.left .dots{display:flex;gap:6px;margin-bottom:12px}
-.left .dot{width:8px;height:8px;border-radius:50%}
-.c-r{background:#ff5f56}.c-y{background:#ffbd2e}.c-g{background:#27c93f}
-.left .fn{color:rgba(255,255,255,0.12);margin-bottom:8px;font-size:10px}
-.kw{color:#c792ea}.fn2{color:#82aaff}.st{color:#c3e88d}.nm{color:#f78c6c}.cm{color:#546e7a}.op{color:#89ddff}
-
-/* Right face — profile card */
-.right{
-  width:250px;height:100%;
-  right:0;top:0;
-  transform-origin:right center;
-  transform:rotateY(90deg);
-  border-radius:0;
-  padding:24px 20px;
-  text-align:center;
-  box-shadow:10px 0 30px rgba(0,0,0,0.3);
-  border-right:none;
-  border-left:1px solid rgba(255,255,255,0.04);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-}
-.avatar{
-  width:56px;height:56px;border-radius:50%;margin:0 auto 14px;
-  background:radial-gradient(circle at 35% 35%, #4488ff, #1a2a66);
-  border:2px solid rgba(80,160,255,0.2);
-  display:flex;align-items:center;justify-content:center;
-  font-size:22px;font-weight:700;color:rgba(255,255,255,0.8);
-}
-.right .nm2{font-size:15px;font-weight:700;margin-bottom:3px}
-.right .role{font-size:11px;color:rgba(255,255,255,0.2);margin-bottom:16px}
-.pstats{display:flex;justify-content:center;gap:16px}
-.pstats .s .v{font-size:14px;font-weight:700;color:#5599ff}
-.pstats .s .l{font-size:9px;color:rgba(255,255,255,0.18)}
-
-/* Bottom face */
-.bottom{
-  width:100%;height:300px;
-  bottom:0;left:0;
-  transform-origin:bottom center;
-  transform:rotateX(90deg);
-  border-radius:0;
-  background:
-    linear-gradient(rgba(60,100,200,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(60,100,200,0.04) 1px, transparent 1px);
-  background-size:40px 40px;
-  border:none;
-  opacity:0.4;
-}
-.bottom::after{display:none}
-
-/* Tags */
-.tag{
-  position:fixed;z-index:10;
-  padding:5px 12px;border-radius:12px;font-size:10px;font-weight:600;
-  font-family:monospace;background:rgba(0,0,0,0.5);
-  backdrop-filter:blur(6px);pointer-events:none;
-  transition:transform 0.06s ease-out;
-}
-.tag-live{top:12%;right:6%;border:1px solid rgba(68,221,170,0.3);color:#44ddaa}
-.tag-three{top:15%;left:6%;border:1px solid rgba(85,153,255,0.3);color:#5599ff}
-
-/* Stats */
-.stats-bar{
-  position:fixed;bottom:6%;left:50%;transform:translateX(-50%);
-  display:flex;gap:24px;z-index:10;
-  background:rgba(8,10,22,0.8);border:1px solid rgba(255,255,255,0.04);
-  border-radius:10px;padding:10px 24px;
-  pointer-events:none;
-}
-.stats-bar .si .v2{font-size:14px;font-weight:700}
-.stats-bar .si .l2{font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace}
-
-/* Particles */
-.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:1;animation:drift linear infinite}
-@keyframes drift{
-  0%{transform:translateY(0);opacity:0}15%{opacity:0.4}85%{opacity:0.4}100%{transform:translateY(-100vh);opacity:0}
-}
-
-/* Pillars */
+.bg{position:fixed;inset:-30%;background:radial-gradient(ellipse at 30% 35%,rgba(40,70,180,0.08) 0%,transparent 55%),radial-gradient(ellipse at 75% 65%,rgba(140,50,200,0.06) 0%,transparent 45%),#08080f;z-index:0}
+.bg-grid{position:fixed;inset:-30%;background-image:linear-gradient(rgba(60,100,200,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(60,100,200,0.03) 1px,transparent 1px);background-size:50px 50px;z-index:0}
 .pillar{position:fixed;bottom:0;width:1px;height:100%;opacity:0.08;pointer-events:none;z-index:1}
 .pillar.b{background:linear-gradient(transparent,#4488ff,transparent);left:22%}
 .pillar.p{background:linear-gradient(transparent,#aa44ff,transparent);left:72%}
 
-/* Frame */
-.frame{
-  position:fixed;inset:0;
-  border:2px solid rgba(40,70,150,0.06);
-  margin:3vh 3vw;border-radius:10px;
-  pointer-events:none;z-index:50;
+.viewport{position:fixed;inset:0;perspective:600px;perspective-origin:50% 50%;display:flex;align-items:center;justify-content:center}
+
+/* ===== 3D BOX ===== */
+.box{
+  transform-style:preserve-3d;
+  position:relative;
+  width:min(80vw,600px);
+  height:min(60vh,420px);
 }
 
-/* HUD */
+/* Shared face styles */
+.face{
+  position:absolute;
+  backface-visibility:visible;
+  overflow:hidden;
+}
+
+/* FRONT — main screen */
+.front{
+  width:100%;height:100%;
+  left:0;top:0;
+  transform:translateZ(0);
+  background:rgba(10,12,28,0.94);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:14px;
+  padding:24px 28px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.5),0 0 60px rgba(40,80,200,0.05);
+}
+.front::after{content:'';position:absolute;top:0;left:16px;right:16px;height:1px;background:linear-gradient(90deg,transparent,rgba(100,180,255,0.12),transparent)}
+.front .nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.front .logo{font-size:15px;font-weight:700}
+.front .links{display:flex;gap:14px}
+.front .links a{color:rgba(255,255,255,0.25);text-decoration:none;font-size:11px}
+.front h1{font-size:clamp(20px,3.5vw,34px);font-weight:700;line-height:1.15;margin-bottom:6px}
+.front .sub{font-size:clamp(11px,1.4vw,14px);color:rgba(255,255,255,0.25);margin-bottom:14px}
+.front .line{width:45px;height:2px;background:linear-gradient(90deg,rgba(80,160,255,0.3),transparent);margin-bottom:14px}
+.front .desc{font-size:clamp(10px,1.2vw,12px);color:rgba(255,255,255,0.16);line-height:1.7;margin-bottom:18px;max-width:400px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:6px 16px;border-radius:14px;font-size:11px;font-weight:600;cursor:pointer;border:none}
+.btn-p{background:rgba(80,160,255,0.1);color:#5599ff;border:1px solid rgba(80,160,255,0.25)}
+.btn-g{background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.08)}
+
+/* LEFT WALL — behind front face, perpendicular */
+.left-wall{
+  width:350px;height:100%;
+  left:0;top:0;
+  transform-origin:left center;
+  transform:translateZ(-1px) rotateY(-90deg);
+  background:rgba(8,10,22,0.96);
+  border:1px solid rgba(255,255,255,0.04);
+  border-left:none;
+  border-radius:0 12px 12px 0;
+  padding:20px 24px;
+  font-family:'SF Mono','Fira Code',monospace;
+  font-size:11px;line-height:1.9;
+  box-shadow:inset 10px 0 30px rgba(0,0,0,0.3);
+}
+.left-wall .dots{display:flex;gap:6px;margin-bottom:10px}
+.left-wall .dot{width:8px;height:8px;border-radius:50%}
+.c-r{background:#ff5f56}.c-y{background:#ffbd2e}.c-g{background:#27c93f}
+.left-wall .fn{color:rgba(255,255,255,0.12);margin-bottom:8px;font-size:10px}
+.kw{color:#c792ea}.fn2{color:#82aaff}.st{color:#c3e88d}.nm{color:#f78c6c}.cm{color:#546e7a}.op{color:#89ddff}
+
+/* RIGHT WALL — behind front face, perpendicular */
+.right-wall{
+  width:300px;height:100%;
+  right:0;top:0;
+  transform-origin:right center;
+  transform:translateZ(-1px) rotateY(90deg);
+  background:rgba(10,12,26,0.96);
+  border:1px solid rgba(255,255,255,0.04);
+  border-right:none;
+  border-radius:12px 0 0 12px;
+  padding:20px;
+  text-align:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:inset -10px 0 30px rgba(0,0,0,0.3);
+}
+.avatar{
+  width:50px;height:50px;border-radius:50%;margin:0 auto 12px;
+  background:radial-gradient(circle at 35% 35%,#4488ff,#1a2a66);
+  border:2px solid rgba(80,160,255,0.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:700;color:rgba(255,255,255,0.8);
+}
+.right-wall .nm2{font-size:14px;font-weight:700;margin-bottom:3px}
+.right-wall .role{font-size:10px;color:rgba(255,255,255,0.2);margin-bottom:14px}
+.pstats{display:flex;justify-content:center;gap:14px}
+.pstats .s .v{font-size:13px;font-weight:700;color:#5599ff}
+.pstats .s .l{font-size:8px;color:rgba(255,255,255,0.18)}
+
+/* FLOOR */
+.floor{
+  width:100%;height:300px;
+  left:0;bottom:0;
+  transform-origin:bottom center;
+  transform:rotateX(90deg);
+  background:
+    linear-gradient(rgba(60,100,200,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(60,100,200,0.04) 1px,transparent 1px);
+  background-size:35px 35px;
+  opacity:0.4;
+  border:none;
+}
+
+/* Tags */
+.tag{position:fixed;z-index:10;padding:5px 12px;border-radius:12px;font-size:10px;font-weight:600;font-family:monospace;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);pointer-events:none}
+.tag-live{top:10%;right:5%;border:1px solid rgba(68,221,170,0.3);color:#44ddaa}
+.tag-three{top:13%;left:5%;border:1px solid rgba(85,153,255,0.3);color:#5599ff}
+
+/* Stats */
+.stats-bar{position:fixed;bottom:5%;left:50%;transform:translateX(-50%);display:flex;gap:20px;z-index:10;background:rgba(8,10,22,0.8);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:8px 20px;pointer-events:none}
+.stats-bar .si .v2{font-size:13px;font-weight:700}
+.stats-bar .si .l2{font-size:8px;color:rgba(255,255,255,0.18);font-family:monospace}
+
+.frame{position:fixed;inset:0;border:2px solid rgba(40,70,150,0.06);margin:3vh 3vw;border-radius:10px;pointer-events:none;z-index:50}
+
+.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:1;animation:drift linear infinite}
+@keyframes drift{0%{transform:translateY(0);opacity:0}15%{opacity:0.35}85%{opacity:0.35}100%{transform:translateY(-100vh);opacity:0}}
+
 .hud{position:fixed;top:10px;left:10px;z-index:100;display:flex;align-items:center;gap:8px}
 .pill-h{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:3px 10px;font-size:10px;color:rgba(255,255,255,0.3)}
 .cam-btn{position:fixed;bottom:10px;right:10px;z-index:100;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:4px 10px;font-size:10px;color:rgba(255,255,255,0.3);cursor:pointer}
@@ -196,13 +146,10 @@ body{
 .cam-btn.active{background:rgba(80,160,255,0.08);border-color:rgba(80,160,255,0.2);color:#5599ff}
 #vid{position:fixed;bottom:38px;right:10px;width:80px;height:60px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);display:none;z-index:100;transform:scaleX(-1);object-fit:cover}
 
-/* Responsive: smaller side faces on small screens */
 @media(max-width:600px){
-  .box{width:90vw;height:65vh}
-  .left{width:200px;font-size:9px}
-  .right{width:170px}
-  .front{padding:20px 24px}
-  .front h1{font-size:24px}
+  .box{width:88vw;height:55vh}
+  .left-wall{width:250px;font-size:9px}
+  .right-wall{width:200px}
 }
 </style>
 </head>
@@ -215,7 +162,6 @@ body{
 <div class="viewport">
 <div class="box" id="box">
 
-  <!-- FRONT face -->
   <div class="face front">
     <div class="nav"><div class="logo">fojcik.com</div><div class="links"><a>Work</a><a>About</a><a>Blog</a><a>Contact</a></div></div>
     <h1>Hi, I'm Michal</h1>
@@ -225,8 +171,7 @@ body{
     <div class="btns"><button class="btn btn-p">View Projects</button><button class="btn btn-g">Get in Touch</button></div>
   </div>
 
-  <!-- LEFT face -->
-  <div class="face left">
+  <div class="face left-wall">
     <div class="dots"><div class="dot c-r"></div><div class="dot c-y"></div><div class="dot c-g"></div></div>
     <div class="fn">projection.js</div>
     <div><span class="kw">function</span> <span class="fn2">shift</span><span class="op">(</span>eye<span class="op">)</span> <span class="op">{</span></div>
@@ -243,8 +188,7 @@ body{
     <div><span class="op">}</span></div>
   </div>
 
-  <!-- RIGHT face -->
-  <div class="face right">
+  <div class="face right-wall">
     <div class="avatar">M</div>
     <div class="nm2">Michal F.</div>
     <div class="role">Creative Dev</div>
@@ -255,17 +199,14 @@ body{
     </div>
   </div>
 
-  <!-- BOTTOM face (floor) -->
-  <div class="face bottom"></div>
+  <div class="face floor"></div>
 
 </div>
 </div>
 
 <div class="frame"></div>
-
 <div class="tag tag-live">⬤ LIVE</div>
 <div class="tag tag-three">THREE.js r160</div>
-
 <div class="stats-bar">
   <div class="si"><div class="v2" style="color:#5599ff">OFF-AXIS</div><div class="l2">PROJECTION</div></div>
   <div class="si"><div class="v2" style="color:#44ddaa">REALTIME</div><div class="l2">TRACKING</div></div>
@@ -279,73 +220,35 @@ body{
 
 <script>
 var box = document.getElementById('box');
-var tags = document.querySelectorAll('.tag');
-var tx = 0, ty = 0, cx = 0, cy = 0;
-var mode = 'mouse';
+var tx=0,ty=0,cx=0,cy=0;
+var mode='mouse';
 
-function tick() {
-  cx += (tx - cx) * 0.06;
-  cy += (ty - cy) * 0.06;
-
-  var ry = cx * 25;   // ±25 degrees
-  var rx = -cy * 10;
-
-  box.style.transform =
-    'rotateY(' + ry + 'deg) ' +
-    'rotateX(' + rx + 'deg)';
-
-  // Tags move opposite (parallax)
-  tags.forEach(function(t, i) {
-    var speed = (i + 1) * 20;
-    t.style.transform = 'translate(' + (cx * speed) + 'px, ' + (cy * speed * 0.5) + 'px)';
-  });
-
+function tick(){
+  cx+=(tx-cx)*0.06;
+  cy+=(ty-cy)*0.06;
+  // Rotate the whole box — ±40 degrees!
+  var ry=cx*40;
+  var rx=-cy*12;
+  box.style.transform='rotateY('+ry+'deg) rotateX('+rx+'deg)';
   requestAnimationFrame(tick);
 }
 
-document.addEventListener('mousemove', function(e) {
-  if (mode !== 'mouse') return;
-  tx = (e.clientX / innerWidth - 0.5) * 2;
-  ty = (e.clientY / innerHeight - 0.5) * 2;
+document.addEventListener('mousemove',function(e){
+  if(mode!=='mouse')return;
+  tx=(e.clientX/innerWidth-0.5)*2;
+  ty=(e.clientY/innerHeight-0.5)*2;
 });
-document.addEventListener('touchmove', function(e) {
-  if (mode !== 'mouse') return;
-  tx = (e.touches[0].clientX / innerWidth - 0.5) * 2;
-  ty = (e.touches[0].clientY / innerHeight - 0.5) * 2;
-}, {passive:true});
+document.addEventListener('touchmove',function(e){
+  if(mode!=='mouse')return;
+  tx=(e.touches[0].clientX/innerWidth-0.5)*2;
+  ty=(e.touches[0].clientY/innerHeight-0.5)*2;
+},{passive:true});
 
-// Camera
-function toggleCam() {
-  var btn = document.getElementById('cbtn'), vid = document.getElementById('vid'), pill = document.getElementById('pill');
-  if (mode === 'camera') {
-    mode = 'mouse'; btn.classList.remove('active'); btn.textContent = '📷 Camera';
-    vid.style.display = 'none'; pill.textContent = '🖱️ Mouse';
-    if (vid.srcObject) { vid.srcObject.getTracks().forEach(function(t){t.stop();}); vid.srcObject = null; }
-    return;
-  }
-  btn.textContent = '⏳...';
-  var s = document.createElement('script'); s.type = 'module';
-  s.textContent = "import {FaceLandmarker,FilesetResolver} from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';try{const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm');const fl=await FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numFaces:1});window._fl=fl;window._sc();}catch(e){document.getElementById('cbtn').textContent='📷 Camera';alert(e.message);}";
-  document.body.appendChild(s);
-}
-window._sc = function() {
-  var btn = document.getElementById('cbtn'), vid = document.getElementById('vid'), pill = document.getElementById('pill');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}}).then(function(stream) {
-    vid.srcObject = stream; vid.style.display = 'block'; vid.play();
-    mode = 'camera'; btn.classList.add('active'); btn.textContent = '🛑 Stop'; pill.textContent = '📷 Camera';
-    !function loop() {
-      if (mode !== 'camera') return;
-      if (window._fl && vid.readyState >= 2) {
-        var r = window._fl.detectForVideo(vid, performance.now());
-        if (r.faceLandmarks && r.faceLandmarks.length) {
-          var n = r.faceLandmarks[0][1];
-          tx = -(n.x - 0.5) * 3; ty = -(n.y - 0.5) * 3;
-        }
-      }
-      requestAnimationFrame(loop);
-    }();
-  }).catch(function(e) { btn.textContent = '📷 Camera'; alert(e.message); });
-};
+// Particles
+!function(){for(var i=0;i<20;i++){var p=document.createElement('div');p.className='particle';var s=2+Math.random()*3;p.style.cssText='width:'+s+'px;height:'+s+'px;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;background:hsla('+(200+Math.random()*60)+',50%,55%,0.3);animation-duration:'+(12+Math.random()*18)+'s;animation-delay:'+(-Math.random()*20)+'s;';document.body.appendChild(p);}}();
+
+function toggleCam(){var b=document.getElementById('cbtn'),v=document.getElementById('vid'),p=document.getElementById('pill');if(mode==='camera'){mode='mouse';b.classList.remove('active');b.textContent='📷 Camera';v.style.display='none';p.textContent='🖱️ Mouse';if(v.srcObject){v.srcObject.getTracks().forEach(function(t){t.stop();});v.srcObject=null;}return;}b.textContent='⏳...';var s=document.createElement('script');s.type='module';s.textContent="import {FaceLandmarker,FilesetResolver} from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';try{const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm');const fl=await FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numFaces:1});window._fl=fl;window._sc();}catch(e){document.getElementById('cbtn').textContent='📷 Camera';alert(e.message);}";document.body.appendChild(s);}
+window._sc=function(){var b=document.getElementById('cbtn'),v=document.getElementById('vid'),p=document.getElementById('pill');navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}}).then(function(stream){v.srcObject=stream;v.style.display='block';v.play();mode='camera';b.classList.add('active');b.textContent='🛑 Stop';p.textContent='📷 Camera';!function loop(){if(mode!=='camera')return;if(window._fl&&v.readyState>=2){var r=window._fl.detectForVideo(v,performance.now());if(r.faceLandmarks&&r.faceLandmarks.length){var n=r.faceLandmarks[0][1];tx=-(n.x-0.5)*3;ty=-(n.y-0.5)*3;}}requestAnimationFrame(loop);}();}).catch(function(e){b.textContent='📷 Camera';alert(e.message);});};
 
 tick();
 </script>

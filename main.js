@@ -1,19 +1,22 @@
 // ============================================================
-//  PARALUX v3 — True Head-Coupled 3D Window
-//  Cards have THICKNESS, perspective is DRAMATIC, window frame anchors it.
+//  PARALUX v4 — Camera Movement + Room + Realistic Content
+//  Forget off-axis projection. Move the camera. Wide FOV. Big range.
+//  The secret: a ROOM gives spatial reference, and BIG camera movement
+//  makes parallax undeniable.
 // ============================================================
 
+var FOV = 75;
 var NEAR = 0.1, FAR = 100;
-var EYE_DIST = 5;         // eye-to-screen distance
-var SCREEN_W = 8;          // virtual screen width
-var SMOOTHING = 0.07;
-var HEAD_RANGE = 2.0;      // DRAMATIC range — key to the effect!
+var CAM_RANGE_X = 3.5;
+var CAM_RANGE_Y = 2.5;
+var LOOK_Z = -5;
+var SMOOTHING = 0.06;
 
 var scene, camera, renderer;
 var targetX = 0, targetY = 0;
 var curX = 0, curY = 0;
 var mode = 'mouse';
-var animObjects = [];
+var anims = [];
 var time = 0;
 
 function init() {
@@ -21,27 +24,40 @@ function init() {
   renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x060610);
+  renderer.setClearColor(0x050508);
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
 
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x060610, 0.025);
+  scene.fog = new THREE.FogExp2(0x050508, 0.018);
 
-  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, NEAR, FAR);
-  camera.position.set(0, 0, EYE_DIST);
+  camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
+  camera.position.set(0, 0, 0);
 
-  // Lighting
-  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
-  var sun = new THREE.DirectionalLight(0xffffff, 0.7);
-  sun.position.set(5, 8, 10);
-  sun.castShadow = true;
-  scene.add(sun);
-  var blu = new THREE.PointLight(0x4488ff, 1.2, 30);
-  blu.position.set(-6, 3, -2);
-  scene.add(blu);
-  var pur = new THREE.PointLight(0xaa44ff, 0.8, 25);
-  pur.position.set(6, -2, -3);
-  scene.add(pur);
+  // === Lighting ===
+  scene.add(new THREE.AmbientLight(0x8888cc, 0.25));
+
+  var mainLight = new THREE.SpotLight(0xffffff, 2.5, 50, Math.PI/4, 0.5, 1);
+  mainLight.position.set(0, 8, 2);
+  mainLight.target.position.set(0, 0, -5);
+  mainLight.castShadow = true;
+  mainLight.shadow.mapSize.set(1024, 1024);
+  scene.add(mainLight);
+  scene.add(mainLight.target);
+
+  var blueLight = new THREE.PointLight(0x4488ff, 3, 30);
+  blueLight.position.set(-5, 3, -3);
+  scene.add(blueLight);
+
+  var purpleLight = new THREE.PointLight(0xaa44ff, 2, 25);
+  purpleLight.position.set(5, -1, -4);
+  scene.add(purpleLight);
+
+  var warmLight = new THREE.PointLight(0xff8844, 1, 20);
+  warmLight.position.set(0, -3, -6);
+  scene.add(warmLight);
 
   buildScene();
 
@@ -58,6 +74,7 @@ function init() {
   }, { passive: true });
   window.addEventListener('resize', function() {
     camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
@@ -65,223 +82,165 @@ function init() {
   animate();
 }
 
-// ==== OFF-AXIS PROJECTION — the heart of it ====
-function updateProjection() {
-  var aspect = window.innerWidth / window.innerHeight;
-  var screenH = SCREEN_W / aspect;
-
-  // Eye offset in world units
-  var ex = curX * HEAD_RANGE;
-  var ey = curY * HEAD_RANGE * 0.6;
-
-  // Frustum at z=0 (the "glass"), shifted by eye position
-  var hw = SCREEN_W / 2;
-  var hh = screenH / 2;
-  var d = EYE_DIST;
-
-  var l = -(hw + ex) * (NEAR / d);
-  var r =  (hw - ex) * (NEAR / d);
-  var b = -(hh + ey) * (NEAR / d);
-  var t =  (hh - ey) * (NEAR / d);
-
-  camera.projectionMatrix.makePerspective(l, r, t, b, NEAR, FAR);
-}
-
-// ==== BUILD 3D SCENE ====
 function buildScene() {
-  // ===== WINDOW FRAME at z≈0 — the anchor =====
-  var frameMat = new THREE.LineBasicMaterial({ color: 0x223355, transparent: true, opacity: 0.6 });
-  var fw = 8.5, fh = 5.5, fd = 0.08;
-  // Outer frame
-  var frameGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(fw, fh, fd));
-  var frame = new THREE.LineSegments(frameGeo, frameMat);
-  frame.position.z = 0.2;
-  scene.add(frame);
-  // Inner glow edge
-  var frameMat2 = new THREE.LineBasicMaterial({ color: 0x3366aa, transparent: true, opacity: 0.25 });
-  var frame2 = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(fw-0.3, fh-0.3, fd)), frameMat2);
-  frame2.position.z = 0.21;
-  scene.add(frame2);
+  // ==========================================
+  //  ROOM — gives spatial reference
+  // ==========================================
 
-  // ===== FLOOR grid at the bottom =====
-  var floorGeo = new THREE.PlaneGeometry(50, 50, 50, 50);
-  var floorMat = new THREE.MeshBasicMaterial({ color: 0x112244, wireframe: true, transparent: true, opacity: 0.12 });
-  var floor = new THREE.Mesh(floorGeo, floorMat);
+  // Back wall
+  var wallTex = makeCanvasTex(2048, 1200, drawBackWall);
+  var backWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(30, 18),
+    new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.9, metalness: 0 })
+  );
+  backWall.position.set(0, 2, -18);
+  backWall.receiveShadow = true;
+  scene.add(backWall);
+
+  // Floor
+  var floorTex = makeCanvasTex(2048, 2048, drawFloor);
+  var floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.7, metalness: 0.1 });
+  var floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 20), floorMat);
   floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -3.5;
-  floor.position.z = -10;
+  floor.position.y = -3;
+  floor.position.z = -8;
+  floor.receiveShadow = true;
   scene.add(floor);
 
-  // ===== BACKGROUND — far glow wall =====
-  var bgTex = makeCanvasTex(2048, 1024, drawBg);
-  var bg = new THREE.Mesh(new THREE.PlaneGeometry(30, 15), new THREE.MeshBasicMaterial({ map: bgTex }));
-  bg.position.z = -20;
-  scene.add(bg);
+  // ==========================================
+  //  MAIN SCREEN — the hero content, deep
+  // ==========================================
+  var screenTex = makeCanvasTex(1920, 1080, drawMainScreen);
+  var screen = new THREE.Mesh(
+    new THREE.PlaneGeometry(12, 6.75),
+    new THREE.MeshStandardMaterial({ map: screenTex, roughness: 0.3, metalness: 0.05, emissive: 0x111122, emissiveIntensity: 0.15 })
+  );
+  screen.position.set(0, 1.5, -12);
+  screen.castShadow = true;
+  screen.receiveShadow = true;
+  scene.add(screen);
 
-  // ===== HERO CARD — thick box, medium depth =====
-  addCard({
-    w: 5.5, h: 3.2, d: 0.12,
-    x: 0, y: 0.2, z: -4,
-    rx: 0, ry: 0, rz: 0,
-    draw: drawHero,
-    emissive: 0x001122,
-  });
+  // Screen bezel (thin box around it)
+  var bezelMat = new THREE.MeshStandardMaterial({ color: 0x111118, roughness: 0.5, metalness: 0.3 });
+  var bezelT = new THREE.Mesh(new THREE.BoxGeometry(12.4, 0.12, 0.2), bezelMat);
+  bezelT.position.set(0, 4.9, -12);
+  scene.add(bezelT);
+  var bezelB = bezelT.clone(); bezelB.position.y = -1.9; scene.add(bezelB);
+  var bezelL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 7, 0.2), bezelMat);
+  bezelL.position.set(-6.2, 1.5, -12); scene.add(bezelL);
+  var bezelR = bezelL.clone(); bezelR.position.x = 6.2; scene.add(bezelR);
 
-  // ===== CODE CARD — left, rotated, closer =====
-  addCard({
-    w: 3.8, h: 3, d: 0.1,
-    x: -3.8, y: -0.3, z: -2.5,
-    rx: 0, ry: 0.25, rz: 0,
-    draw: drawCode,
-    emissive: 0x110022,
-  });
+  // Screen glow
+  var glowMat = new THREE.MeshBasicMaterial({ color: 0x3366aa, transparent: true, opacity: 0.06 });
+  var glow = new THREE.Mesh(new THREE.PlaneGeometry(13, 7.5), glowMat);
+  glow.position.set(0, 1.5, -11.9);
+  scene.add(glow);
 
-  // ===== PROFILE CARD — right, closer =====
-  addCard({
-    w: 2.8, h: 3.5, d: 0.1,
-    x: 3.8, y: 0, z: -2,
-    rx: 0, ry: -0.2, rz: 0,
-    draw: drawProfile,
-    emissive: 0x001111,
-  });
+  // ==========================================
+  //  FLOATING CARDS — at various depths
+  // ==========================================
 
-  // ===== STATS PANEL — bottom, far =====
-  addCard({
-    w: 6, h: 1.2, d: 0.06,
-    x: 0, y: -2.8, z: -7,
-    rx: 0.08, ry: 0, rz: 0,
-    draw: drawStats,
-    emissive: 0x000811,
-  });
+  // Code card — left, mid depth
+  var codeTex = makeCanvasTex(900, 700, drawCodeCard);
+  addFloatingCard(codeTex, -5, 2, -6, 3.5, 2.7, 0.2, 0.15, 0x110022);
 
-  // ===== FLOATING TAGS — very near =====
-  addCard({
-    w: 1.8, h: 0.5, d: 0.04,
-    x: 4.5, y: 2, z: -0.8,
-    rx: 0, ry: -0.3, rz: 0,
-    draw: drawTagLive,
-    emissive: 0x002211,
-  });
-  addCard({
-    w: 2, h: 0.5, d: 0.04,
-    x: -4.8, y: 2.2, z: -0.5,
-    rx: 0, ry: 0.25, rz: 0,
-    draw: drawTagThree,
-    emissive: 0x001122,
-  });
+  // Profile card — right, closer
+  var profileTex = makeCanvasTex(700, 900, drawProfileCard);
+  addFloatingCard(profileTex, 5.5, 1, -4, 2.5, 3.2, -0.15, -0.12, 0x001111);
 
-  // ===== 3D WIREFRAME SHAPES =====
-  // Big icosahedron far left
+  // Stats card — bottom center, far
+  var statsTex = makeCanvasTex(1400, 300, drawStatsCard);
+  addFloatingCard(statsTex, 0, -1.5, -9, 6, 1.3, 0.1, 0, 0x000811);
+
+  // Tag cards — very near
+  var tag1Tex = makeCanvasTex(500, 160, drawTagLive);
+  addFloatingCard(tag1Tex, 3, 3.5, -1.5, 2, 0.6, 0, -0.2, 0x002211);
+
+  var tag2Tex = makeCanvasTex(550, 160, drawTagThree);
+  addFloatingCard(tag2Tex, -4, 3.8, -1, 2.2, 0.6, 0, 0.18, 0x001122);
+
+  // ==========================================
+  //  3D OBJECTS — wireframe geometries
+  // ==========================================
+
+  // Big icosahedron — far left
   var ico = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.5, 1),
-    new THREE.MeshBasicMaterial({ color: 0x2244aa, wireframe: true, transparent: true, opacity: 0.3 })
+    new THREE.IcosahedronGeometry(1.8, 1),
+    new THREE.MeshBasicMaterial({ color: 0x2244aa, wireframe: true, transparent: true, opacity: 0.25 })
   );
-  ico.position.set(-8, 1, -12);
+  ico.position.set(-9, 3, -14);
   scene.add(ico);
-  animObjects.push({ mesh: ico, rs: 0.003 });
+  anims.push({ mesh: ico, rs: 0.003 });
 
-  // Torus far right
+  // Torus — far right
   var torus = new THREE.Mesh(
-    new THREE.TorusGeometry(1.2, 0.4, 16, 32),
-    new THREE.MeshBasicMaterial({ color: 0x6633cc, wireframe: true, transparent: true, opacity: 0.25 })
+    new THREE.TorusGeometry(1.5, 0.5, 16, 32),
+    new THREE.MeshBasicMaterial({ color: 0x6633cc, wireframe: true, transparent: true, opacity: 0.2 })
   );
-  torus.position.set(9, -1.5, -14);
+  torus.position.set(10, -1, -15);
   scene.add(torus);
-  animObjects.push({ mesh: torus, rs: 0.004 });
+  anims.push({ mesh: torus, rs: 0.004 });
 
-  // Octahedron near left
+  // Octahedron — near left
   var oct = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.6, 0),
-    new THREE.MeshBasicMaterial({ color: 0x44ccff, wireframe: true, transparent: true, opacity: 0.45 })
+    new THREE.OctahedronGeometry(0.7, 0),
+    new THREE.MeshBasicMaterial({ color: 0x44ccff, wireframe: true, transparent: true, opacity: 0.4 })
   );
-  oct.position.set(-2, 2.2, -1);
+  oct.position.set(-2, 3.5, -0.5);
   scene.add(oct);
-  animObjects.push({ mesh: oct, rs: 0.01 });
+  anims.push({ mesh: oct, rs: 0.01 });
 
-  // Small dodecahedron near right
+  // Dodecahedron — near right
   var dodec = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(0.4, 0),
-    new THREE.MeshBasicMaterial({ color: 0xff6644, wireframe: true, transparent: true, opacity: 0.4 })
+    new THREE.DodecahedronGeometry(0.5, 0),
+    new THREE.MeshBasicMaterial({ color: 0xff6644, wireframe: true, transparent: true, opacity: 0.35 })
   );
-  dodec.position.set(2.5, -1.8, -0.5);
+  dodec.position.set(2.5, -2, 0);
   scene.add(dodec);
-  animObjects.push({ mesh: dodec, rs: 0.012 });
+  anims.push({ mesh: dodec, rs: 0.012 });
 
-  // ===== VERTICAL LIGHT PILLARS =====
-  var pillarGeo = new THREE.PlaneGeometry(0.03, 12);
-  [[-4, 0, -8, 'rgba(68,136,255,0.15)'],
-   [4, 0, -10, 'rgba(170,68,255,0.1)'],
-   [0, 0, -6, 'rgba(255,255,255,0.05)']
-  ].forEach(function(p) {
-    var tex = makeCanvasTex(32, 512, function(ctx, w, h) {
-      var g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, 'transparent');
-      g.addColorStop(0.3, p[3]);
-      g.addColorStop(0.7, p[3]);
-      g.addColorStop(1, 'transparent');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-    });
-    var m = new THREE.Mesh(pillarGeo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
-    m.position.set(p[0], p[1], p[2]);
-    scene.add(m);
-  });
-
-  // ===== PARTICLES =====
-  buildParticles();
+  // ==========================================
+  //  PARTICLES
+  // ==========================================
+  buildParticles(500);
 }
 
-// ==== ADD A CARD (thick box with face texture + glowing edges) ====
-function addCard(cfg) {
-  var tex = makeCanvasTex(Math.round(cfg.w * 300), Math.round(cfg.h * 300), cfg.draw);
-
-  // Front face
-  var frontMat = new THREE.MeshStandardMaterial({
-    map: tex,
-    roughness: 0.8,
-    metalness: 0.1,
-    emissive: new THREE.Color(cfg.emissive || 0x000000),
-    emissiveIntensity: 0.3,
+function addFloatingCard(tex, x, y, z, w, h, ry, rz, emissive) {
+  var mat = new THREE.MeshStandardMaterial({
+    map: tex, roughness: 0.6, metalness: 0.05,
+    emissive: new THREE.Color(emissive || 0x000000),
+    emissiveIntensity: 0.4,
   });
-  var front = new THREE.Mesh(new THREE.PlaneGeometry(cfg.w, cfg.h), frontMat);
-  front.castShadow = true;
+  var mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  mesh.position.set(x, y, z);
+  mesh.rotation.y = ry || 0;
+  mesh.rotation.z = rz || 0;
+  mesh.castShadow = true;
+  scene.add(mesh);
 
-  // Back face (dark)
-  var backMat = new THREE.MeshStandardMaterial({ color: 0x0a0a1a, roughness: 0.9 });
-  var back = new THREE.Mesh(new THREE.PlaneGeometry(cfg.w, cfg.h), backMat);
-  back.position.z = -cfg.d;
-
-  // Edges (the key 3D cue!)
-  var edgeMat = new THREE.LineBasicMaterial({ color: 0x3366aa, transparent: true, opacity: 0.35 });
-  var edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(cfg.w, cfg.h, cfg.d)), edgeMat);
-
-  // Group
-  var group = new THREE.Group();
-  group.add(front);
-  group.add(back);
-  group.add(edges);
-  group.position.set(cfg.x, cfg.y, cfg.z);
-  group.rotation.set(cfg.rx || 0, cfg.ry || 0, cfg.rz || 0);
-  scene.add(group);
+  // Edge glow
+  var edgeMat = new THREE.LineBasicMaterial({ color: 0x3366aa, transparent: true, opacity: 0.2 });
+  var edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w, h, 0.05)), edgeMat);
+  edges.position.copy(mesh.position);
+  edges.rotation.copy(mesh.rotation);
+  scene.add(edges);
 }
 
-// ==== PARTICLES ====
-function buildParticles() {
-  var n = 400;
+function buildParticles(n) {
   var geo = new THREE.BufferGeometry();
   var pos = new Float32Array(n * 3);
   var col = new Float32Array(n * 3);
   for (var i = 0; i < n; i++) {
-    pos[i*3]   = (Math.random()-0.5) * 30;
-    pos[i*3+1] = (Math.random()-0.5) * 20;
-    pos[i*3+2] = -Math.random() * 25 - 0.5;
+    pos[i*3]   = (Math.random()-0.5) * 25;
+    pos[i*3+1] = (Math.random()-0.5) * 18 - 1;
+    pos[i*3+2] = -Math.random() * 22;
     var c = new THREE.Color().setHSL(0.55 + Math.random()*0.2, 0.5, 0.3 + Math.random()*0.5);
     col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b;
   }
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
-    size: 0.04, vertexColors: true, transparent: true, opacity: 0.5, sizeAttenuation: true, depthWrite: false
+    size: 0.05, vertexColors: true, transparent: true, opacity: 0.45, sizeAttenuation: true, depthWrite: false
   })));
 }
 
@@ -305,19 +264,26 @@ function rr(ctx, x, y, w, h, r) {
 }
 
 // ==== DRAWING FUNCTIONS ====
-function drawBg(ctx, w, h) {
-  var g = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w*0.5);
-  g.addColorStop(0, '#0f1025');
+function drawBackWall(ctx, w, h) {
+  // Dark gradient wall
+  var g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#0a0a18');
+  g.addColorStop(0.5, '#080810');
   g.addColorStop(1, '#060610');
   ctx.fillStyle = g;
-  ctx.fillRect(0,0,w,h);
+  ctx.fillRect(0, 0, w, h);
 
-  ctx.strokeStyle = 'rgba(60,100,200,0.04)';
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(60, 100, 200, 0.03)';
   ctx.lineWidth = 1;
-  for (var x = 0; x < w; x += 100) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
-  for (var y = 0; y < h; y += 100) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+  for (var x = 0; x < w; x += 80) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+  for (var y = 0; y < h; y += 80) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
 
-  [[w*0.2, h*0.4, 300, 'rgba(40,80,200,0.06)'], [w*0.8, h*0.6, 350, 'rgba(120,40,200,0.05)']].forEach(function(s) {
+  // Ambient glow spots
+  [[w*0.15, h*0.3, 400, 'rgba(40,80,200,0.04)'],
+   [w*0.85, h*0.6, 350, 'rgba(120,40,200,0.03)'],
+   [w*0.5, h*0.1, 300, 'rgba(60,160,255,0.03)']
+  ].forEach(function(s) {
     var grd = ctx.createRadialGradient(s[0],s[1],0, s[0],s[1],s[2]);
     grd.addColorStop(0, s[3]); grd.addColorStop(1, 'transparent');
     ctx.fillStyle = grd;
@@ -325,135 +291,226 @@ function drawBg(ctx, w, h) {
   });
 }
 
-function drawHero(ctx, w, h) {
-  ctx.clearRect(0,0,w,h);
-  rr(ctx, 30, 30, w-60, h-60, 22);
-  ctx.fillStyle = 'rgba(10,12,28,0.88)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+function drawFloor(ctx, w, h) {
+  ctx.fillStyle = '#080810';
+  ctx.fillRect(0, 0, w, h);
 
-  ctx.font = 'bold 56px -apple-system, sans-serif';
-  ctx.fillStyle = '#fff';
-  ctx.fillText("Hi, I'm Michal", 70, 140);
+  // Reflective grid
+  ctx.strokeStyle = 'rgba(80, 120, 255, 0.05)';
+  ctx.lineWidth = 1;
+  for (var x = 0; x < w; x += 60) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+  for (var y = 0; y < h; y += 60) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
 
-  ctx.font = '24px -apple-system, sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.fillText('Creative Developer & 3D Enthusiast', 70, 185);
-
-  ctx.strokeStyle = 'rgba(80,160,255,0.2)';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(70, 210); ctx.lineTo(380, 210); ctx.stroke();
-
-  ctx.font = '20px -apple-system, sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ['I build interactive web experiences with','Three.js, WebGL, and creative coding.','This page uses off-axis projection to','create real depth perception.'].forEach(function(l, i) {
-    ctx.fillText(l, 70, 255 + i * 34);
-  });
-
-  rr(ctx, 70, 410, 160, 44, 22);
-  ctx.fillStyle = 'rgba(80,160,255,0.12)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(80,160,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.font = 'bold 18px -apple-system, sans-serif'; ctx.fillStyle = '#5599ff';
-  ctx.fillText('View Work', 110, 438);
-
-  rr(ctx, 260, 410, 160, 44, 22);
-  ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.fillText('Contact Me', 295, 438);
-
-  ctx.font = '16px monospace';
-  ctx.fillStyle = 'rgba(80,160,255,0.08)';
-  ['const eye = {','  x: head.x,','  y: head.y','};','updateFrustum(eye);'].forEach(function(l, i) {
-    ctx.fillText(l, w - 250, 80 + i * 24);
-  });
+  // Center glow
+  var g = ctx.createRadialGradient(w/2, h*0.3, 0, w/2, h*0.3, 500);
+  g.addColorStop(0, 'rgba(60,100,255,0.06)');
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
 }
 
-function drawCode(ctx, w, h) {
-  ctx.clearRect(0,0,w,h);
+function drawMainScreen(ctx, w, h) {
+  // This is the HERO — a full webpage-like content
+  ctx.clearRect(0, 0, w, h);
+
+  // Background
+  rr(ctx, 0, 0, w, h, 0);
+  ctx.fillStyle = '#0c0e1c';
+  ctx.fill();
+
+  // Top nav bar
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  ctx.fillRect(0, 0, w, 70);
+  ctx.font = 'bold 28px -apple-system, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('fojcik.com', 60, 46);
+  ctx.font = '20px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ['Work', 'About', 'Blog', 'Contact'].forEach(function(item, i) {
+    ctx.fillText(item, w - 400 + i * 100, 46);
+  });
+
+  // Hero section
+  var hy = 140;
+  ctx.font = 'bold 72px -apple-system, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText("Hi, I'm Michal", 80, hy + 60);
+
+  ctx.font = '28px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillText('Creative Developer building interactive 3D web experiences', 80, hy + 110);
+
+  // Divider
+  ctx.strokeStyle = 'rgba(80,160,255,0.2)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(80, hy + 140); ctx.lineTo(600, hy + 140); ctx.stroke();
+
+  // About text
+  ctx.font = '22px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ['I specialize in Three.js, WebGL, and creative coding.', 'This page uses head-coupled perspective — move your', 'mouse (or enable camera) to see the 3D depth effect.'].forEach(function(line, i) {
+    ctx.fillText(line, 80, hy + 185 + i * 36);
+  });
+
+  // CTA Buttons
+  rr(ctx, 80, hy + 330, 200, 54, 27);
+  ctx.fillStyle = 'rgba(80,160,255,0.12)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(80,160,255,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.font = 'bold 22px -apple-system, sans-serif'; ctx.fillStyle = '#5599ff';
+  ctx.fillText('View Projects', 120, hy + 363);
+
+  rr(ctx, 310, hy + 330, 200, 54, 27);
+  ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillText('Get in Touch', 350, hy + 363);
+
+  // Project cards section
+  var py = hy + 460;
+  ctx.font = 'bold 32px -apple-system, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Featured Work', 80, py);
+
+  // Project card 1
+  rr(ctx, 80, py + 30, 500, 200, 16);
+  ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.font = 'bold 24px -apple-system, sans-serif'; ctx.fillStyle = '#fff';
+  ctx.fillText('3D Portfolio', 110, py + 80);
+  ctx.font = '18px -apple-system, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillText('Interactive WebGL experience with', 110, py + 115);
+  ctx.fillText('head-tracked parallax effect', 110, py + 140);
+  ctx.font = '16px monospace'; ctx.fillStyle = '#44ddaa';
+  ctx.fillText('Three.js · MediaPipe · WebGL', 110, py + 180);
+
+  // Project card 2
+  rr(ctx, 610, py + 30, 500, 200, 16);
+  ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.font = 'bold 24px -apple-system, sans-serif'; ctx.fillStyle = '#fff';
+  ctx.fillText('Creative Experiments', 640, py + 80);
+  ctx.font = '18px -apple-system, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillText('Generative art and interactive', 640, py + 115);
+  ctx.fillText('visualizations built for the web', 640, py + 140);
+  ctx.font = '16px monospace'; ctx.fillStyle = '#bb77ff';
+  ctx.fillText('GLSL · Canvas · SVG · D3', 640, py + 180);
+
+  // Right side — decorative code snippet
+  ctx.font = '17px monospace';
+  ctx.fillStyle = 'rgba(80,160,255,0.08)';
+  var codeLines = [
+    '// off-axis projection',
+    'var l = -(hw + ex) * (near/d);',
+    'var r =  (hw - ex) * (near/d);',
+    '',
+    'camera.projectionMatrix',
+    '  .makePerspective(',
+    '    l, r, t, b, near, far',
+    '  );',
+  ];
+  codeLines.forEach(function(line, i) {
+    ctx.fillText(line, w - 450, 200 + i * 26);
+  });
+
+  // Bottom — tech stack icons placeholder
+  ctx.font = '16px monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillText('Built with Three.js · MediaPipe · WebGL · Canvas', 80, h - 40);
+}
+
+function drawCodeCard(ctx, w, h) {
+  ctx.clearRect(0, 0, w, h);
   rr(ctx, 15, 15, w-30, h-30, 14);
   ctx.fillStyle = 'rgba(8,10,22,0.92)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1; ctx.stroke();
 
   ['#ff5f56','#ffbd2e','#27c93f'].forEach(function(c, i) {
     ctx.fillStyle = c;
-    ctx.beginPath(); ctx.arc(38 + i*20, 40, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(40 + i*22, 44, 5, 0, Math.PI*2); ctx.fill();
   });
-  ctx.font = '13px monospace'; ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.fillText('projection.js', 110, 44);
+  ctx.font = '14px monospace'; ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.fillText('frustum.js', 120, 48);
 
-  ctx.font = '15px monospace';
-  var lines = [
-    ['function ', '#c792ea'], ['updateFrustum(eye) {', '#82aaff'],
-    ['  var hw = screenW/2;', '#c3e88d'],
-    ['  var d  = eye.z;', '#c3e88d'],
+  ctx.font = '16px monospace';
+  [
+    ['function ', '#c792ea'], ['shiftPerspective(eye) {', '#82aaff'],
+    ['  // screen is a fixed window', '#546e7a'],
+    ['  var hw = screenW / 2;', '#c3e88d'],
+    ['  var d  = eyeDistance;', '#c3e88d'],
     ['', ''],
-    ['  left  = -(hw+eye.x)', '#f78c6c'], ['    * (near/d);', '#f78c6c'],
-    ['  right = (hw-eye.x)', '#f78c6c'], ['    * (near/d);', '#f78c6c'],
+    ['  // asymmetric frustum', '#546e7a'],
+    ['  left  = -(hw + eye.x)', '#f78c6c'],
+    ['    * (near / d);', '#f78c6c'],
+    ['  right =  (hw - eye.x)', '#f78c6c'],
+    ['    * (near / d);', '#f78c6c'],
     ['', ''],
-    ['  projMatrix.', '#82aaff'], ['makePerspective', '#ffcb6b'],
-    ['    (left, right,', '#ffcb6b'], ['     top, bottom);', '#ffcb6b'],
+    ['  projMatrix.makePerspective(', '#82aaff'],
+    ['    left, right,', '#ffcb6b'],
+    ['    top, bottom,', '#ffcb6b'],
+    ['    near, far', '#ffcb6b'],
+    ['  );', '#82aaff'],
     ['}', '#c792ea'],
-  ];
-  lines.forEach(function(l, i) {
-    ctx.fillStyle = l[1]; ctx.fillText(l[0], 35, 85 + i * 28);
+  ].forEach(function(l, i) {
+    ctx.fillStyle = l[1]; ctx.fillText(l[0], 38, 90 + i * 30);
   });
 }
 
-function drawProfile(ctx, w, h) {
-  ctx.clearRect(0,0,w,h);
+function drawProfileCard(ctx, w, h) {
+  ctx.clearRect(0, 0, w, h);
   rr(ctx, 15, 15, w-30, h-30, 14);
-  ctx.fillStyle = 'rgba(10,12,26,0.85)'; ctx.fill();
+  ctx.fillStyle = 'rgba(10,12,26,0.88)'; ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1; ctx.stroke();
 
-  var cx = w/2, cy = 140;
-  ctx.beginPath(); ctx.arc(cx, cy, 55, 0, Math.PI*2);
-  var ag = ctx.createRadialGradient(cx-15, cy-15, 5, cx, cy, 55);
+  var cx = w/2, cy = 150;
+  ctx.beginPath(); ctx.arc(cx, cy, 60, 0, Math.PI*2);
+  var ag = ctx.createRadialGradient(cx-15, cy-15, 5, cx, cy, 60);
   ag.addColorStop(0, '#4488ff'); ag.addColorStop(0.6, '#2244aa'); ag.addColorStop(1, '#0a0a33');
   ctx.fillStyle = ag; ctx.fill();
   ctx.strokeStyle = 'rgba(80,160,255,0.3)'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.font = 'bold 40px -apple-system, sans-serif';
+  ctx.font = 'bold 44px -apple-system, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.textAlign = 'center';
-  ctx.fillText('M', cx, cy + 14);
+  ctx.fillText('M', cx, cy + 16);
 
-  ctx.font = 'bold 22px -apple-system, sans-serif'; ctx.fillStyle = '#fff';
-  ctx.fillText('Michal F.', cx, 235);
-  ctx.font = '14px -apple-system, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.fillText('Creative Dev', cx, 260);
+  ctx.font = 'bold 24px -apple-system, sans-serif'; ctx.fillStyle = '#fff';
+  ctx.fillText('Michal Fojcik', cx, 255);
+  ctx.font = '16px -apple-system, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillText('Creative Developer', cx, 285);
+
+  ctx.strokeStyle = 'rgba(80,160,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40, 310); ctx.lineTo(w-40, 310); ctx.stroke();
 
   [{v:'5+',l:'Projects'},{v:'3D',l:'Spec.'},{v:'∞',l:'Curious'}].forEach(function(s, i) {
-    var sx = 50 + i*((w-100)/3);
-    ctx.font = 'bold 20px -apple-system, sans-serif'; ctx.fillStyle = '#5599ff';
-    ctx.fillText(s.v, sx, 330);
-    ctx.font = '12px -apple-system, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.fillText(s.l, sx, 350);
+    var sx = 55 + i*((w-110)/3);
+    ctx.font = 'bold 22px -apple-system, sans-serif'; ctx.fillStyle = '#5599ff';
+    ctx.fillText(s.v, sx, 360);
+    ctx.font = '13px -apple-system, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillText(s.l, sx, 385);
   });
   ctx.textAlign = 'left';
 }
 
-function drawStats(ctx, w, h) {
-  ctx.clearRect(0,0,w,h);
+function drawStatsCard(ctx, w, h) {
+  ctx.clearRect(0, 0, w, h);
   rr(ctx, 8, 8, w-16, h-16, 10);
-  ctx.fillStyle = 'rgba(8,10,22,0.8)'; ctx.fill();
+  ctx.fillStyle = 'rgba(8,10,22,0.82)'; ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1; ctx.stroke();
 
   [{l:'PROJECTION',v:'OFF-AXIS',c:'#5599ff'},{l:'TRACKING',v:'REALTIME',c:'#44ddaa'},
    {l:'DEPTH',v:'5 LAYERS',c:'#bb77ff'},{l:'FPS',v:'60',c:'#ffaa44'}
   ].forEach(function(s, i) {
-    var x = 60 + i * ((w-80)/4);
-    ctx.font = 'bold 24px -apple-system, sans-serif'; ctx.fillStyle = s.c;
-    ctx.fillText(s.v, x, h/2 + 5);
-    ctx.font = '12px monospace'; ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.fillText(s.l, x, h/2 + 24);
+    var x = 50 + i * ((w-60)/4);
+    ctx.font = 'bold 26px -apple-system, sans-serif'; ctx.fillStyle = s.c;
+    ctx.fillText(s.v, x, h/2 + 6);
+    ctx.font = '13px monospace'; ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillText(s.l, x, h/2 + 28);
   });
 }
 
 function drawTagLive(ctx, w, h) {
   ctx.clearRect(0,0,w,h);
   rr(ctx, 6, 6, w-12, h-12, 20);
-  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fill();
   ctx.strokeStyle = '#44ddaa'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.7; ctx.stroke(); ctx.globalAlpha = 1;
   ctx.font = 'bold 18px monospace'; ctx.fillStyle = '#44ddaa';
   ctx.textAlign = 'center'; ctx.fillText('⬤ LIVE', w/2, h/2+6); ctx.textAlign = 'left';
@@ -462,7 +519,7 @@ function drawTagLive(ctx, w, h) {
 function drawTagThree(ctx, w, h) {
   ctx.clearRect(0,0,w,h);
   rr(ctx, 6, 6, w-12, h-12, 20);
-  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fill();
   ctx.strokeStyle = '#5599ff'; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.7; ctx.stroke(); ctx.globalAlpha = 1;
   ctx.font = 'bold 16px monospace'; ctx.fillStyle = '#5599ff';
   ctx.textAlign = 'center'; ctx.fillText('THREE.js r160', w/2, h/2+5); ctx.textAlign = 'left';
@@ -475,12 +532,14 @@ function animate() {
   curX += (targetX - curX) * SMOOTHING;
   curY += (targetY - curY) * SMOOTHING;
 
-  updateProjection();
-
-  camera.position.set(0, 0, EYE_DIST);
+  // === CAMERA MOVEMENT — the key! ===
+  // Move camera, look at a point in the scene
+  camera.position.x = curX * CAM_RANGE_X;
+  camera.position.y = curY * CAM_RANGE_Y;
+  camera.lookAt(0, 1, LOOK_Z);
 
   time += 0.01;
-  animObjects.forEach(function(o) {
+  anims.forEach(function(o) {
     o.mesh.rotation.x += o.rs;
     o.mesh.rotation.y += o.rs * 1.3;
   });
@@ -538,7 +597,6 @@ window._startCam = function() {
 };
 
 function toggleGrid() {}
-
 window.toggleCamera = toggleCamera;
 window.toggleGrid = toggleGrid;
 

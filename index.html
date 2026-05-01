@@ -11,23 +11,10 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   -webkit-font-smoothing:antialiased;color:#fff;
   height:100vh;width:100vw;
-}
-
-/* === VIEWPORT with perspective === */
-.viewport{
-  position:fixed;inset:0;
-  perspective:600px;
-  perspective-origin:50% 50%;
-}
-
-/* === SCENE that rotates === */
-.scene{
-  position:absolute;inset:0;
-  transform-style:preserve-3d;
   display:flex;align-items:center;justify-content:center;
 }
 
-/* === Background (flat, doesn't rotate) === */
+/* Background */
 .bg{
   position:fixed;inset:-30%;
   background:
@@ -45,181 +32,155 @@ body{
   z-index:0;
 }
 
-/* === Floor (tilted, part of scene) === */
-.floor-wrap{
-  position:absolute;bottom:0;left:-20%;right:-20%;height:50%;
-  transform:translateZ(-200px) rotateX(75deg);
-  transform-origin:bottom center;
+/* Viewport */
+.viewport{
+  position:fixed;inset:0;
+  perspective:800px;
+  perspective-origin:50% 50%;
+  display:flex;align-items:center;justify-content:center;
 }
-.floor-grid{
+
+/* ===== THE BOX ===== */
+.box{
+  transform-style:preserve-3d;
+  position:relative;
+  width:min(85vw, 650px);
+  height:min(70vh, 480px);
+  transition:transform 0.06s ease-out;
+}
+
+/* Front face — main screen */
+.face{
+  position:absolute;
+  backface-visibility:hidden;
+  background:rgba(10,12,28,0.94);
+  border:1px solid rgba(255,255,255,0.06);
+  overflow:hidden;
+}
+.face::after{
+  content:'';position:absolute;top:0;left:20px;right:20px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(100,180,255,0.12),transparent);
+}
+
+.front{
   width:100%;height:100%;
+  transform:translateZ(0);
+  border-radius:16px;
+  padding:28px 32px;
+  box-shadow:
+    0 30px 80px rgba(0,0,0,0.5),
+    0 0 60px rgba(40,80,200,0.05);
+}
+.front .nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.front .logo{font-size:16px;font-weight:700}
+.front .links{display:flex;gap:16px}
+.front .links a{color:rgba(255,255,255,0.25);text-decoration:none;font-size:12px}
+.front h1{font-size:clamp(22px,4vw,38px);font-weight:700;line-height:1.15;margin-bottom:8px}
+.front .sub{font-size:clamp(12px,1.5vw,15px);color:rgba(255,255,255,0.25);margin-bottom:16px}
+.front .line{width:50px;height:2px;background:linear-gradient(90deg,rgba(80,160,255,0.3),transparent);margin-bottom:16px}
+.front .desc{font-size:clamp(11px,1.3vw,13px);color:rgba(255,255,255,0.16);line-height:1.7;margin-bottom:20px;max-width:450px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:7px 18px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:none}
+.btn-p{background:rgba(80,160,255,0.1);color:#5599ff;border:1px solid rgba(80,160,255,0.25)}
+.btn-g{background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.08)}
+
+/* Left face — code card */
+.left{
+  width:300px;height:100%;
+  left:0;top:0;
+  transform-origin:left center;
+  transform:rotateY(-90deg);
+  border-radius:0;
+  padding:24px 20px;
+  font-family:'SF Mono','Fira Code',monospace;
+  font-size:11px;line-height:1.9;
+  box-shadow:-10px 0 30px rgba(0,0,0,0.3);
+  border-left:none;
+  border-right:1px solid rgba(255,255,255,0.04);
+}
+.left .dots{display:flex;gap:6px;margin-bottom:12px}
+.left .dot{width:8px;height:8px;border-radius:50%}
+.c-r{background:#ff5f56}.c-y{background:#ffbd2e}.c-g{background:#27c93f}
+.left .fn{color:rgba(255,255,255,0.12);margin-bottom:8px;font-size:10px}
+.kw{color:#c792ea}.fn2{color:#82aaff}.st{color:#c3e88d}.nm{color:#f78c6c}.cm{color:#546e7a}.op{color:#89ddff}
+
+/* Right face — profile card */
+.right{
+  width:250px;height:100%;
+  right:0;top:0;
+  transform-origin:right center;
+  transform:rotateY(90deg);
+  border-radius:0;
+  padding:24px 20px;
+  text-align:center;
+  box-shadow:10px 0 30px rgba(0,0,0,0.3);
+  border-right:none;
+  border-left:1px solid rgba(255,255,255,0.04);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.avatar{
+  width:56px;height:56px;border-radius:50%;margin:0 auto 14px;
+  background:radial-gradient(circle at 35% 35%, #4488ff, #1a2a66);
+  border:2px solid rgba(80,160,255,0.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:700;color:rgba(255,255,255,0.8);
+}
+.right .nm2{font-size:15px;font-weight:700;margin-bottom:3px}
+.right .role{font-size:11px;color:rgba(255,255,255,0.2);margin-bottom:16px}
+.pstats{display:flex;justify-content:center;gap:16px}
+.pstats .s .v{font-size:14px;font-weight:700;color:#5599ff}
+.pstats .s .l{font-size:9px;color:rgba(255,255,255,0.18)}
+
+/* Bottom face */
+.bottom{
+  width:100%;height:300px;
+  bottom:0;left:0;
+  transform-origin:bottom center;
+  transform:rotateX(90deg);
+  border-radius:0;
   background:
     linear-gradient(rgba(60,100,200,0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(60,100,200,0.04) 1px, transparent 1px);
   background-size:40px 40px;
-  opacity:0.5;
+  border:none;
+  opacity:0.4;
 }
-
-/* === CARDS — each one is a 3D box === */
-.card{
-  position:absolute;
-  transform-style:preserve-3d;
-}
-
-/* Main card */
-.main-card{
-  width:min(88vw, 750px);
-  transform:translateZ(-120px);
-  background:rgba(10,12,28,0.93);
-  border:1px solid rgba(255,255,255,0.06);
-  border-radius:18px;
-  padding:28px 34px;
-  position:relative;overflow:hidden;
-  box-shadow:
-    0 30px 80px rgba(0,0,0,0.5),
-    0 0 1px rgba(255,255,255,0.1);
-}
-/* Top edge — gives thickness */
-.main-card::before{
-  content:'';position:absolute;
-  top:-4px;left:10px;right:10px;height:4px;
-  background:rgba(20,25,50,0.8);
-  transform:rotateX(90deg);
-  transform-origin:bottom;
-  border-top:1px solid rgba(255,255,255,0.04);
-}
-.main-card::after{
-  content:'';position:absolute;top:0;left:20px;right:20px;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(100,180,255,0.12),transparent);
-}
-.main-card .nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
-.main-card .logo{font-size:16px;font-weight:700}
-.main-card .links{display:flex;gap:18px}
-.main-card .links a{color:rgba(255,255,255,0.25);text-decoration:none;font-size:12px}
-.main-card h1{font-size:clamp(24px,4vw,40px);font-weight:700;line-height:1.15;margin-bottom:8px}
-.main-card .sub{font-size:clamp(12px,1.6vw,16px);color:rgba(255,255,255,0.25);margin-bottom:18px}
-.main-card .line{width:60px;height:2px;background:linear-gradient(90deg,rgba(80,160,255,0.3),transparent);margin-bottom:18px}
-.main-card .desc{font-size:clamp(11px,1.4vw,14px);color:rgba(255,255,255,0.16);line-height:1.7;margin-bottom:24px;max-width:500px}
-.btns{display:flex;gap:10px;flex-wrap:wrap}
-.btn{padding:8px 20px;border-radius:18px;font-size:12px;font-weight:600;cursor:pointer;border:none}
-.btn-p{background:rgba(80,160,255,0.1);color:#5599ff;border:1px solid rgba(80,160,255,0.25)}
-.btn-g{background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.08)}
-
-/* Code card */
-.code-card{
-  left:2%;top:50%;
-  width:min(28vw, 240px);
-  transform:translateY(-50%) translateZ(80px) rotateY(30deg);
-  transform-origin:center center;
-  background:rgba(8,10,22,0.95);
-  border:1px solid rgba(255,255,255,0.05);
-  border-radius:14px;
-  padding:14px 16px;
-  font-family:'SF Mono','Fira Code',monospace;
-  font-size:10px;line-height:1.8;
-  box-shadow:0 20px 50px rgba(0,0,0,0.5);
-  display:none;
-}
-@media(min-width:768px){
-  .code-card{display:block}
-}
-/* Right edge — visible side */
-.code-card::after{
-  content:'';position:absolute;
-  top:8px;right:-5px;bottom:8px;width:5px;
-  background:rgba(15,18,35,0.9);
-  transform:rotateY(90deg);
-  transform-origin:left;
-  border-right:1px solid rgba(255,255,255,0.03);
-}
-.code-card .dots{display:flex;gap:6px;margin-bottom:10px}
-.code-card .dot{width:8px;height:8px;border-radius:50%}
-.c-r{background:#ff5f56}.c-y{background:#ffbd2e}.c-g{background:#27c93f}
-.code-card .fn{color:rgba(255,255,255,0.12);margin-bottom:8px;font-size:10px}
-.kw{color:#c792ea}.fn2{color:#82aaff}.st{color:#c3e88d}.nm{color:#f78c6c}.cm{color:#546e7a}.op{color:#89ddff}
-
-/* Profile card */
-.profile-card{
-  right:2%;top:50%;
-  width:min(20vw, 180px);
-  transform:translateY(-50%) translateZ(100px) rotateY(-28deg);
-  transform-origin:center center;
-  background:rgba(10,12,26,0.92);
-  border:1px solid rgba(255,255,255,0.05);
-  border-radius:14px;
-  padding:18px;text-align:center;
-  box-shadow:0 20px 50px rgba(0,0,0,0.5);
-  display:none;
-}
-@media(min-width:768px){
-  .profile-card{display:block}
-}
-/* Left edge — visible side */
-.profile-card::after{
-  content:'';position:absolute;
-  top:8px;left:-5px;bottom:8px;width:5px;
-  background:rgba(15,18,35,0.9);
-  transform:rotateY(-90deg);
-  transform-origin:right;
-  border-left:1px solid rgba(255,255,255,0.03);
-}
-.avatar{
-  width:50px;height:50px;border-radius:50%;margin:0 auto 12px;
-  background:radial-gradient(circle at 35% 35%, #4488ff, #1a2a66);
-  border:2px solid rgba(80,160,255,0.2);
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;font-weight:700;color:rgba(255,255,255,0.8);
-}
-.profile-card .nm2{font-size:14px;font-weight:700;margin-bottom:3px}
-.profile-card .role{font-size:10px;color:rgba(255,255,255,0.2);margin-bottom:12px}
-.pstats{display:flex;justify-content:center;gap:14px}
-.pstats .s .v{font-size:13px;font-weight:700;color:#5599ff}
-.pstats .s .l{font-size:8px;color:rgba(255,255,255,0.18)}
+.bottom::after{display:none}
 
 /* Tags */
-.tag-live{
-  position:absolute;right:3%;top:12%;
-  transform:translateZ(200px) rotateY(-20deg);
+.tag{
+  position:fixed;z-index:10;
   padding:5px 12px;border-radius:12px;font-size:10px;font-weight:600;
   font-family:monospace;background:rgba(0,0,0,0.5);
-  border:1px solid rgba(68,221,170,0.3);color:#44ddaa;
-  box-shadow:0 8px 20px rgba(0,0,0,0.3);
+  backdrop-filter:blur(6px);pointer-events:none;
+  transition:transform 0.06s ease-out;
 }
-.tag-three{
-  position:absolute;left:3%;top:15%;
-  transform:translateZ(180px) rotateY(22deg);
-  padding:5px 12px;border-radius:12px;font-size:10px;font-weight:600;
-  font-family:monospace;background:rgba(0,0,0,0.5);
-  border:1px solid rgba(85,153,255,0.3);color:#5599ff;
-  box-shadow:0 8px 20px rgba(0,0,0,0.3);
-}
+.tag-live{top:12%;right:6%;border:1px solid rgba(68,221,170,0.3);color:#44ddaa}
+.tag-three{top:15%;left:6%;border:1px solid rgba(85,153,255,0.3);color:#5599ff}
 
 /* Stats */
-.stats-wrap{
-  position:absolute;bottom:8%;left:50%;
-  transform:translateX(-50%) translateZ(-250px);
-}
 .stats-bar{
-  display:flex;gap:24px;
+  position:fixed;bottom:6%;left:50%;transform:translateX(-50%);
+  display:flex;gap:24px;z-index:10;
   background:rgba(8,10,22,0.8);border:1px solid rgba(255,255,255,0.04);
   border-radius:10px;padding:10px 24px;
+  pointer-events:none;
 }
 .stats-bar .si .v2{font-size:14px;font-weight:700}
-.stats-bar .si .l2{font-size:8px;color:rgba(255,255,255,0.18);font-family:monospace}
+.stats-bar .si .l2{font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace}
 
-/* Wireframe shapes */
-.wire{
-  position:absolute;
-  border:1px solid rgba(34,68,170,0.2);
-  border-radius:50%;
-  transform-style:preserve-3d;
-  animation:spin 20s linear infinite;
+/* Particles */
+.particle{position:fixed;border-radius:50%;pointer-events:none;z-index:1;animation:drift linear infinite}
+@keyframes drift{
+  0%{transform:translateY(0);opacity:0}15%{opacity:0.4}85%{opacity:0.4}100%{transform:translateY(-100vh);opacity:0}
 }
-.w1{width:80px;height:80px;top:12%;left:15%;transform:translateZ(-400px);border-color:rgba(34,68,170,0.2)}
-.w2{width:50px;height:50px;bottom:25%;right:18%;transform:translateZ(120px);border-color:rgba(255,102,68,0.2);animation-duration:15s;animation-direction:reverse}
-@keyframes spin{to{transform:translateZ(var(--tz,-400px)) rotate(360deg)}}
 
-/* Window frame */
+/* Pillars */
+.pillar{position:fixed;bottom:0;width:1px;height:100%;opacity:0.08;pointer-events:none;z-index:1}
+.pillar.b{background:linear-gradient(transparent,#4488ff,transparent);left:22%}
+.pillar.p{background:linear-gradient(transparent,#aa44ff,transparent);left:72%}
+
+/* Frame */
 .frame{
   position:fixed;inset:0;
   border:2px solid rgba(40,70,150,0.06);
@@ -227,56 +188,35 @@ body{
   pointer-events:none;z-index:50;
 }
 
-/* Particles */
-.particle{position:absolute;border-radius:50%;pointer-events:none;animation:drift linear infinite}
-@keyframes drift{
-  0%{transform:translateY(0);opacity:0}15%{opacity:0.4}85%{opacity:0.4}100%{transform:translateY(-100vh);opacity:0}
-}
-
-/* Pillars */
-.pillar{position:absolute;bottom:0;width:1px;height:100%;opacity:0.08;pointer-events:none;z-index:1}
-.pillar.b{background:linear-gradient(transparent,#4488ff,transparent);left:22%}
-.pillar.p{background:linear-gradient(transparent,#aa44ff,transparent);left:72%}
-
 /* HUD */
 .hud{position:fixed;top:10px;left:10px;z-index:100;display:flex;align-items:center;gap:8px}
-.pill{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:3px 10px;font-size:10px;color:rgba(255,255,255,0.3)}
+.pill-h{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:3px 10px;font-size:10px;color:rgba(255,255,255,0.3)}
 .cam-btn{position:fixed;bottom:10px;right:10px;z-index:100;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:4px 10px;font-size:10px;color:rgba(255,255,255,0.3);cursor:pointer}
 .cam-btn:hover{background:rgba(255,255,255,0.08);color:#fff}
 .cam-btn.active{background:rgba(80,160,255,0.08);border-color:rgba(80,160,255,0.2);color:#5599ff}
 #vid{position:fixed;bottom:38px;right:10px;width:80px;height:60px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);display:none;z-index:100;transform:scaleX(-1);object-fit:cover}
+
+/* Responsive: smaller side faces on small screens */
+@media(max-width:600px){
+  .box{width:90vw;height:65vh}
+  .left{width:200px;font-size:9px}
+  .right{width:170px}
+  .front{padding:20px 24px}
+  .front h1{font-size:24px}
+}
 </style>
 </head>
 <body>
 
-<!-- Flat background -->
 <div class="bg"></div>
 <div class="bg-grid"></div>
 <div class="pillar b"></div><div class="pillar p"></div>
 
-<!-- 3D Scene -->
 <div class="viewport">
-<div class="scene" id="scene">
+<div class="box" id="box">
 
-  <!-- Floor -->
-  <div class="floor-wrap"><div class="floor-grid"></div></div>
-
-  <!-- Wireframes -->
-  <div class="wire w1" style="--tz:-400px"></div>
-  <div class="wire w2" style="--tz:120px"></div>
-
-  <!-- Stats -->
-  <div class="stats-wrap">
-    <div class="stats-bar">
-      <div class="si"><div class="v2" style="color:#5599ff">OFF-AXIS</div><div class="l2">PROJECTION</div></div>
-      <div class="si"><div class="v2" style="color:#44ddaa">REALTIME</div><div class="l2">TRACKING</div></div>
-      <div class="si"><div class="v2" style="color:#bb77ff">5 LAYERS</div><div class="l2">DEPTH</div></div>
-      <div class="si"><div class="v2" style="color:#ffaa44">60</div><div class="l2">FPS</div></div>
-    </div>
-  </div>
-
-  <!-- Main card — z=-150px -->
-  <div class="card main-card">
+  <!-- FRONT face -->
+  <div class="face front">
     <div class="nav"><div class="logo">fojcik.com</div><div class="links"><a>Work</a><a>About</a><a>Blog</a><a>Contact</a></div></div>
     <h1>Hi, I'm Michal</h1>
     <div class="sub">Creative Developer & 3D Enthusiast</div>
@@ -285,12 +225,12 @@ body{
     <div class="btns"><button class="btn btn-p">View Projects</button><button class="btn btn-g">Get in Touch</button></div>
   </div>
 
-  <!-- Code card — z=+50px, rotated 25deg -->
-  <div class="card code-card">
+  <!-- LEFT face -->
+  <div class="face left">
     <div class="dots"><div class="dot c-r"></div><div class="dot c-y"></div><div class="dot c-g"></div></div>
     <div class="fn">projection.js</div>
     <div><span class="kw">function</span> <span class="fn2">shift</span><span class="op">(</span>eye<span class="op">)</span> <span class="op">{</span></div>
-    <div>&nbsp;&nbsp;<span class="cm">// window stays fixed</span></div>
+    <div>&nbsp;&nbsp;<span class="cm">// screen is a window</span></div>
     <div>&nbsp;&nbsp;<span class="kw">var</span> hw = w <span class="op">/</span> <span class="nm">2</span><span class="op">;</span></div>
     <div>&nbsp;&nbsp;left <span class="op">=</span> <span class="op">-(</span>hw<span class="op">+</span>eye.x<span class="op">)</span></div>
     <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">*</span> <span class="op">(</span>near<span class="op">/</span>d<span class="op">)</span><span class="op">;</span></div>
@@ -303,8 +243,8 @@ body{
     <div><span class="op">}</span></div>
   </div>
 
-  <!-- Profile card — z=+80px, rotated -22deg -->
-  <div class="card profile-card">
+  <!-- RIGHT face -->
+  <div class="face right">
     <div class="avatar">M</div>
     <div class="nm2">Michal F.</div>
     <div class="role">Creative Dev</div>
@@ -315,26 +255,31 @@ body{
     </div>
   </div>
 
-  <!-- Tags — z=+160~180px -->
-  <div class="tag-live">⬤ LIVE</div>
-  <div class="tag-three">THREE.js r160</div>
-
-  <!-- Particles -->
-  <div id="particles" style="position:absolute;inset:0;transform:translateZ(200px);transform-style:preserve-3d;pointer-events:none;overflow:hidden"></div>
+  <!-- BOTTOM face (floor) -->
+  <div class="face bottom"></div>
 
 </div>
 </div>
 
-<!-- Window frame -->
 <div class="frame"></div>
 
-<!-- HUD -->
-<div class="hud"><div class="pill" id="pill">🖱️ Mouse</div></div>
+<div class="tag tag-live">⬤ LIVE</div>
+<div class="tag tag-three">THREE.js r160</div>
+
+<div class="stats-bar">
+  <div class="si"><div class="v2" style="color:#5599ff">OFF-AXIS</div><div class="l2">PROJECTION</div></div>
+  <div class="si"><div class="v2" style="color:#44ddaa">REALTIME</div><div class="l2">TRACKING</div></div>
+  <div class="si"><div class="v2" style="color:#bb77ff">5 LAYERS</div><div class="l2">DEPTH</div></div>
+  <div class="si"><div class="v2" style="color:#ffaa44">60</div><div class="l2">FPS</div></div>
+</div>
+
+<div class="hud"><div class="pill-h" id="pill">🖱️ Mouse</div></div>
 <video id="vid" autoplay playsinline></video>
 <button class="cam-btn" id="cbtn" onclick="toggleCam()">📷 Camera</button>
 
 <script>
-var scene = document.getElementById('scene');
+var box = document.getElementById('box');
+var tags = document.querySelectorAll('.tag');
 var tx = 0, ty = 0, cx = 0, cy = 0;
 var mode = 'mouse';
 
@@ -342,13 +287,18 @@ function tick() {
   cx += (tx - cx) * 0.06;
   cy += (ty - cy) * 0.06;
 
-  // ROTATE the scene — this creates perspective distortion on all cards
-  var ry = cx * 20;   // ±20 degrees Y rotation
-  var rx = -cy * 12;  // ±12 degrees X rotation
+  var ry = cx * 25;   // ±25 degrees
+  var rx = -cy * 10;
 
-  scene.style.transform =
+  box.style.transform =
     'rotateY(' + ry + 'deg) ' +
     'rotateX(' + rx + 'deg)';
+
+  // Tags move opposite (parallax)
+  tags.forEach(function(t, i) {
+    var speed = (i + 1) * 20;
+    t.style.transform = 'translate(' + (cx * speed) + 'px, ' + (cy * speed * 0.5) + 'px)';
+  });
 
   requestAnimationFrame(tick);
 }
@@ -363,18 +313,6 @@ document.addEventListener('touchmove', function(e) {
   tx = (e.touches[0].clientX / innerWidth - 0.5) * 2;
   ty = (e.touches[0].clientY / innerHeight - 0.5) * 2;
 }, {passive:true});
-
-// Particles
-!function() {
-  var c = document.getElementById('particles');
-  for (var i = 0; i < 20; i++) {
-    var p = document.createElement('div');
-    p.className = 'particle';
-    var sz = 2 + Math.random() * 3;
-    p.style.cssText = 'width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;background:hsla('+(200+Math.random()*60)+',50%,55%,0.3);animation-duration:'+(12+Math.random()*18)+'s;animation-delay:'+(-Math.random()*20)+'s;';
-    c.appendChild(p);
-  }
-}();
 
 // Camera
 function toggleCam() {

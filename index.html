@@ -2,306 +2,282 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>PARALUX</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{
-  overflow:hidden;background:#070710;
+  overflow:hidden;background:#060610;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   -webkit-font-smoothing:antialiased;color:#fff;
   height:100vh;width:100vw;
+  position:relative;
 }
 
-/* THE VIEWPORT — perspective origin */
-.viewport{
-  position:fixed;inset:0;
-  perspective:500px;
-  perspective-origin:50% 50%;
-  overflow:hidden;
-}
-
-/* THE SCENE — this rotates */
-.scene{
-  position:absolute;inset:0;
-  transform-style:preserve-3d;
-}
-
-/* Each layer */
+/* Each layer is absolutely positioned, moved by JS */
 .layer{
   position:absolute;
-  transform-style:preserve-3d;
+  top:0;left:0;
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  will-change:transform;
   pointer-events:none;
 }
 .layer>*{pointer-events:auto}
 
-/* ---- LAYER DEPTHS ---- */
-/* Background: furthest back */
-.depth-far{
-  position:absolute;inset:-50%;
-  transform:translateZ(-1200px);
-}
-.depth-far .bg{
-  position:absolute;inset:0;
+/* === DEPTH 0: Background (barely moves) === */
+.bg-layer .wall{
+  position:absolute;inset:-20%;
   background:
-    radial-gradient(ellipse at 30% 40%, rgba(40,70,180,0.1) 0%, transparent 60%),
-    radial-gradient(ellipse at 70% 60%, rgba(140,50,200,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 35%, rgba(40,70,180,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 65%, rgba(140,50,200,0.06) 0%, transparent 45%),
     #08080f;
 }
-.depth-far .grid{
-  position:absolute;inset:0;
+.bg-layer .grid{
+  position:absolute;inset:-20%;
   background-image:
+    linear-gradient(rgba(60,100,200,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60,100,200,0.035) 1px, transparent 1px);
+  background-size:50px 50px;
+}
+
+/* === DEPTH 1: Floor grid (slow) === */
+.floor-layer{
+  align-items:flex-end;
+  padding-bottom:0;
+}
+.floor{
+  width:140%;height:45%;
+  margin-left:-20%;
+  background:
     linear-gradient(rgba(60,100,200,0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(60,100,200,0.04) 1px, transparent 1px);
-  background-size:60px 60px;
-}
-
-/* Floor: tilted at bottom */
-.depth-floor{
-  position:absolute;
-  width:200%;left:-50%;height:80%;bottom:-20%;
-  transform:translateZ(-600px) rotateX(80deg);
-  background:
-    linear-gradient(rgba(60,100,200,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(60,100,200,0.05) 1px, transparent 1px);
-  background-size:50px 50px;
+  background-size:40px 40px;
   opacity:0.5;
+  transform:perspective(300px) rotateX(60deg);
+  transform-origin:bottom center;
 }
 
-/* Main screen: center, moderate depth */
-.depth-mid{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%) translateZ(-300px);
-  width:min(88vw, 800px);
-}
-
-/* Code card: left side, closer */
-.depth-near-left{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(-140%,-60%) translateZ(-80px) rotateY(12deg);
-  width:min(35vw, 320px);
-}
-
-/* Profile card: right side, closest */
-.depth-near-right{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(50%,-55%) translateZ(60px) rotateY(-10deg);
-  width:min(28vw, 240px);
-}
-
-/* Tags: very close */
-.depth-front-1{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(180%,-180%) translateZ(200px);
-}
-.depth-front-2{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(-160%,-190%) translateZ(180px);
-}
-
-/* Stats: far bottom */
-.depth-far-bottom{
-  position:absolute;
-  top:50%;left:50%;
-  transform:translate(-50%,120%) translateZ(-500px);
-}
-
-/* ---- CARD STYLES ---- */
-.card{
-  background:rgba(10,12,28,0.92);
+/* === DEPTH 2: Main screen (medium) === */
+.main-layer .screen{
+  width:min(85vw, 780px);
+  background:rgba(10,12,28,0.94);
   border:1px solid rgba(255,255,255,0.06);
-  border-radius:16px;
-  padding:32px;
-  box-shadow:0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(40,80,200,0.05);
-  backdrop-filter:blur(10px);
+  border-radius:18px;
+  padding:32px 38px;
+  position:relative;overflow:hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.03),
+    0 30px 80px rgba(0,0,0,0.6),
+    0 0 60px rgba(40,80,200,0.06);
 }
-.card::before{
+.screen::before{
   content:'';position:absolute;top:0;left:20px;right:20px;height:1px;
-  background:linear-gradient(90deg, transparent, rgba(100,180,255,0.15), transparent);
+  background:linear-gradient(90deg,transparent,rgba(100,180,255,0.15),transparent);
 }
-.card{position:relative;overflow:hidden}
+.screen .nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
+.screen .logo{font-size:17px;font-weight:700}
+.screen .links{display:flex;gap:20px}
+.screen .links a{color:rgba(255,255,255,0.28);text-decoration:none;font-size:13px}
+.screen h1{font-size:clamp(26px,4.2vw,44px);font-weight:700;line-height:1.15;margin-bottom:10px}
+.screen .sub{font-size:clamp(13px,1.8vw,17px);color:rgba(255,255,255,0.28);margin-bottom:20px}
+.screen .line{width:70px;height:2px;background:linear-gradient(90deg,rgba(80,160,255,0.35),transparent);margin-bottom:20px}
+.screen .desc{font-size:clamp(12px,1.6vw,15px);color:rgba(255,255,255,0.18);line-height:1.7;margin-bottom:28px;max-width:550px}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{padding:9px 22px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s}
+.btn-p{background:rgba(80,160,255,0.1);color:#5599ff;border:1px solid rgba(80,160,255,0.25)}
+.btn-g{background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.35);border:1px solid rgba(255,255,255,0.08)}
 
-/* Main screen */
-.main-card{
-  padding:36px 44px;
-}
-.main-card .nav{
-  display:flex;justify-content:space-between;align-items:center;margin-bottom:36px;
-}
-.main-card .logo{font-size:18px;font-weight:700}
-.main-card .links{display:flex;gap:24px}
-.main-card .links a{color:rgba(255,255,255,0.3);text-decoration:none;font-size:13px}
-.main-card h1{font-size:clamp(28px,4.5vw,48px);font-weight:700;line-height:1.2;margin-bottom:12px}
-.main-card .sub{font-size:clamp(14px,2vw,18px);color:rgba(255,255,255,0.3);margin-bottom:24px}
-.main-card .line{width:80px;height:2px;background:linear-gradient(90deg,rgba(80,160,255,0.4),transparent);margin-bottom:24px}
-.main-card .desc{font-size:clamp(13px,1.8vw,16px);color:rgba(255,255,255,0.2);line-height:1.7;margin-bottom:32px}
-.btns{display:flex;gap:12px;flex-wrap:wrap}
-.btn{padding:10px 24px;border-radius:22px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s}
-.btn-p{background:rgba(80,160,255,0.1);color:#5599ff;border:1px solid rgba(80,160,255,0.3)}
-.btn-g{background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.1)}
-
-/* Code card */
+/* === DEPTH 3: Code card (faster) === */
+.code-layer{align-items:center;justify-content:flex-start;padding-left:5%}
 .code-card{
-  padding:20px 22px;
+  width:min(32vw, 290px);
+  background:rgba(8,10,22,0.95);
+  border:1px solid rgba(255,255,255,0.05);
+  border-radius:14px;
+  padding:16px 20px;
   font-family:'SF Mono','Fira Code',monospace;
-  font-size:12px;line-height:2;
+  font-size:11px;line-height:2;
+  box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  transform:rotate(3deg);
 }
-.code-card .dots{display:flex;gap:7px;margin-bottom:14px}
-.code-card .dot{width:9px;height:9px;border-radius:50%}
+.code-card .dots{display:flex;gap:6px;margin-bottom:10px}
+.code-card .dot{width:8px;height:8px;border-radius:50%}
 .c-r{background:#ff5f56}.c-y{background:#ffbd2e}.c-g{background:#27c93f}
-.code-card .fn{color:rgba(255,255,255,0.15);margin-bottom:10px;font-size:11px}
+.code-card .fn{color:rgba(255,255,255,0.12);margin-bottom:8px;font-size:10px}
 .kw{color:#c792ea}.fn2{color:#82aaff}.st{color:#c3e88d}.nm{color:#f78c6c}.cm{color:#546e7a}.op{color:#89ddff}
 
-/* Profile card */
-.profile-card{padding:28px;text-align:center}
+/* === DEPTH 4: Profile card (fastest) === */
+.profile-layer{align-items:center;justify-content:flex-end;padding-right:5%}
+.profile-card{
+  width:min(24vw, 220px);
+  background:rgba(10,12,26,0.92);
+  border:1px solid rgba(255,255,255,0.05);
+  border-radius:14px;
+  padding:24px;text-align:center;
+  box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  transform:rotate(-2deg);
+}
 .avatar{
-  width:64px;height:64px;border-radius:50%;margin:0 auto 16px;
-  background:radial-gradient(circle at 35% 35%, #4488ff, #1a2a66, #0a0a33);
+  width:56px;height:56px;border-radius:50%;margin:0 auto 14px;
+  background:radial-gradient(circle at 35% 35%, #4488ff, #1a2a66);
   border:2px solid rgba(80,160,255,0.2);
   display:flex;align-items:center;justify-content:center;
-  font-size:26px;font-weight:700;color:rgba(255,255,255,0.8);
+  font-size:22px;font-weight:700;color:rgba(255,255,255,0.8);
 }
-.profile-card .nm2{font-size:16px;font-weight:700;margin-bottom:4px}
-.profile-card .role{font-size:12px;color:rgba(255,255,255,0.25);margin-bottom:16px}
-.stats{display:flex;justify-content:center;gap:20px}
-.stats .s .v{font-size:16px;font-weight:700;color:#5599ff}
-.stats .s .l{font-size:10px;color:rgba(255,255,255,0.2)}
+.profile-card .nm2{font-size:15px;font-weight:700;margin-bottom:3px}
+.profile-card .role{font-size:11px;color:rgba(255,255,255,0.2);margin-bottom:14px}
+.pstats{display:flex;justify-content:center;gap:16px}
+.pstats .s .v{font-size:14px;font-weight:700;color:#5599ff}
+.pstats .s .l{font-size:9px;color:rgba(255,255,255,0.18)}
 
-/* Tags */
+/* === DEPTH 5: Tags (very fast) === */
+.tag1-layer{align-items:flex-start;justify-content:flex-end;padding:8% 8% 0 0}
+.tag2-layer{align-items:flex-start;justify-content:flex-start;padding:10% 0 0 8%}
 .tag{
-  padding:7px 16px;border-radius:16px;font-size:12px;font-weight:600;
-  font-family:monospace;white-space:nowrap;backdrop-filter:blur(8px);
-  background:rgba(0,0,0,0.5);
+  padding:6px 14px;border-radius:14px;font-size:11px;font-weight:600;
+  font-family:monospace;white-space:nowrap;
+  background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);
 }
-.tag-live{border:1px solid rgba(68,221,170,0.4);color:#44ddaa}
-.tag-three{border:1px solid rgba(85,153,255,0.4);color:#5599ff}
+.tag-live{border:1px solid rgba(68,221,170,0.35);color:#44ddaa}
+.tag-three{border:1px solid rgba(85,153,255,0.35);color:#5599ff}
 
-/* Stats bar */
+/* === DEPTH 6: Particles (extreme) === */
+.particle{
+  position:absolute;border-radius:50%;
+  animation:drift linear infinite;
+  pointer-events:none;
+}
+@keyframes drift{
+  0%{transform:translateY(0) translateX(0);opacity:0}
+  15%{opacity:0.5}85%{opacity:0.5}
+  100%{transform:translateY(-110vh) translateX(40px);opacity:0}
+}
+
+/* === Stats === */
+.stats-layer{align-items:flex-end;justify-content:center;padding-bottom:6%}
 .stats-bar{
-  display:flex;gap:32px;
-  background:rgba(8,10,22,0.85);border:1px solid rgba(255,255,255,0.04);
-  border-radius:12px;padding:14px 32px;backdrop-filter:blur(8px);
+  display:flex;gap:28px;
+  background:rgba(8,10,22,0.8);border:1px solid rgba(255,255,255,0.04);
+  border-radius:10px;padding:12px 28px;
 }
-.stats-bar .si .v2{font-size:18px;font-weight:700}
-.stats-bar .si .l2{font-size:10px;color:rgba(255,255,255,0.2);font-family:monospace}
+.stats-bar .si .v2{font-size:16px;font-weight:700}
+.stats-bar .si .l2{font-size:9px;color:rgba(255,255,255,0.18);font-family:monospace}
 
-/* Wireframe shapes */
-.wire{
-  position:absolute;
-  border:1px solid rgba(34,68,170,0.2);
-  border-radius:50%;
-  transform-style:preserve-3d;
-  animation:spin 20s linear infinite;
+/* === Light pillars === */
+.pillar{position:absolute;bottom:0;width:1px;height:100%;opacity:0.1;pointer-events:none}
+.pillar.b{background:linear-gradient(transparent,#4488ff,transparent);left:22%}
+.pillar.p{background:linear-gradient(transparent,#aa44ff,transparent);left:72%}
+
+/* === Window frame === */
+.frame{
+  position:fixed;inset:0;
+  border:2px solid rgba(40,70,150,0.08);
+  margin:3vh 3vw;
+  border-radius:12px;
+  pointer-events:none;z-index:50;
 }
-.w1{width:100px;height:100px;top:15%;left:10%;transform:translateZ(-900px);border-color:rgba(34,68,170,0.2)}
-.w2{width:60px;height:60px;bottom:20%;right:12%;transform:translateZ(120px);border-color:rgba(255,102,68,0.25);animation-duration:15s;animation-direction:reverse}
-@keyframes spin{to{transform:translateZ(var(--tz,-900px)) rotate(360deg)}}
-
-/* Light pillars */
-.pillar{position:absolute;bottom:0;width:1px;height:100%;opacity:0.12}
-.pillar.b{background:linear-gradient(transparent,#4488ff,transparent);left:25%}
-.pillar.p{background:linear-gradient(transparent,#aa44ff,transparent);left:68%}
-
-/* Particles */
-.particle{position:absolute;border-radius:50%;animation:float linear infinite}
-@keyframes float{
-  0%{transform:translateY(0);opacity:0}10%{opacity:0.6}90%{opacity:0.6}100%{transform:translateY(-100vh);opacity:0}
+.frame::before{
+  content:'';position:absolute;inset:-1px;
+  border:1px solid rgba(255,255,255,0.02);
+  border-radius:13px;
 }
 
-/* HUD */
-.hud{position:fixed;top:14px;left:14px;z-index:100;display:flex;align-items:center;gap:10px}
-.pill{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,0.4)}
-.cam-btn{position:fixed;bottom:14px;right:14px;z-index:100;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:6px 14px;font-size:11px;color:rgba(255,255,255,0.4);cursor:pointer}
-.cam-btn:hover{background:rgba(255,255,255,0.1);color:#fff}
-.cam-btn.active{background:rgba(80,160,255,0.1);border-color:rgba(80,160,255,0.25);color:#5599ff}
-#vid{position:fixed;bottom:48px;right:14px;width:100px;height:75px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);display:none;z-index:100;transform:scaleX(-1);object-fit:cover}
+/* === HUD === */
+.hud{position:fixed;top:12px;left:12px;z-index:100;display:flex;align-items:center;gap:8px}
+.pill{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:4px 10px;font-size:10px;color:rgba(255,255,255,0.3)}
+.cam-btn{position:fixed;bottom:12px;right:12px;z-index:100;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:5px 12px;font-size:10px;color:rgba(255,255,255,0.3);cursor:pointer}
+.cam-btn:hover{background:rgba(255,255,255,0.08);color:#fff}
+.cam-btn.active{background:rgba(80,160,255,0.08);border-color:rgba(80,160,255,0.2);color:#5599ff}
+#vid{position:fixed;bottom:42px;right:12px;width:90px;height:68px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);display:none;z-index:100;transform:scaleX(-1);object-fit:cover}
 </style>
 </head>
 <body>
 
-<div class="viewport">
-<div class="scene" id="scene">
+<!-- Window frame -->
+<div class="frame"></div>
 
-  <!-- BG -->
-  <div class="depth-far"><div class="bg"></div><div class="grid"></div></div>
-  <div class="depth-floor"></div>
-  <div class="pillar b"></div><div class="pillar p"></div>
-
-  <!-- Wireframes -->
-  <div class="wire w1" style="--tz:-900px"></div>
-  <div class="wire w2" style="--tz:120px"></div>
-
-  <!-- Stats bar (far) -->
-  <div class="layer depth-far-bottom">
-    <div class="stats-bar">
-      <div class="si"><div class="v2" style="color:#5599ff">OFF-AXIS</div><div class="l2">PROJECTION</div></div>
-      <div class="si"><div class="v2" style="color:#44ddaa">REALTIME</div><div class="l2">TRACKING</div></div>
-      <div class="si"><div class="v2" style="color:#bb77ff">5 LAYERS</div><div class="l2">DEPTH</div></div>
-      <div class="si"><div class="v2" style="color:#ffaa44">60</div><div class="l2">FPS</div></div>
-    </div>
-  </div>
-
-  <!-- Main screen -->
-  <div class="layer depth-mid">
-    <div class="card main-card">
-      <div class="nav"><div class="logo">fojcik.com</div><div class="links"><a>Work</a><a>About</a><a>Blog</a><a>Contact</a></div></div>
-      <h1>Hi, I'm Michal</h1>
-      <div class="sub">Creative Developer & 3D Enthusiast</div>
-      <div class="line"></div>
-      <div class="desc">I build interactive web experiences with Three.js, WebGL, and creative coding. This page uses head-coupled perspective — move your mouse to see the 3D depth effect.</div>
-      <div class="btns"><button class="btn btn-p">View Projects</button><button class="btn btn-g">Get in Touch</button></div>
-    </div>
-  </div>
-
-  <!-- Code card -->
-  <div class="layer depth-near-left">
-    <div class="card code-card">
-      <div class="dots"><div class="dot c-r"></div><div class="dot c-y"></div><div class="dot c-g"></div></div>
-      <div class="fn">projection.js</div>
-      <div><span class="kw">function</span> <span class="fn2">shift</span><span class="op">(</span>eye<span class="op">)</span> <span class="op">{</span></div>
-      <div>&nbsp;&nbsp;<span class="cm">// window stays fixed</span></div>
-      <div>&nbsp;&nbsp;<span class="kw">var</span> hw = w <span class="op">/</span> <span class="nm">2</span><span class="op">;</span></div>
-      <div>&nbsp;&nbsp;left <span class="op">=</span> <span class="op">-(</span>hw<span class="op">+</span>eye.x<span class="op">)</span></div>
-      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">*</span> <span class="op">(</span>near<span class="op">/</span>d<span class="op">)</span><span class="op">;</span></div>
-      <div>&nbsp;&nbsp;right <span class="op">=</span> <span class="op">(</span>hw<span class="op">-</span>eye.x<span class="op">)</span></div>
-      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">*</span> <span class="op">(</span>near<span class="op">/</span>d<span class="op">)</span><span class="op">;</span></div>
-      <div>&nbsp;</div>
-      <div>&nbsp;&nbsp;proj<span class="op">.</span><span class="fn2">makePersp</span><span class="op">(</span></div>
-      <div>&nbsp;&nbsp;&nbsp;&nbsp;left,right,top,bot</div>
-      <div>&nbsp;&nbsp;<span class="op">)</span><span class="op">;</span></div>
-      <div><span class="op">}</span></div>
-    </div>
-  </div>
-
-  <!-- Profile card -->
-  <div class="layer depth-near-right">
-    <div class="card profile-card">
-      <div class="avatar">M</div>
-      <div class="nm2">Michal F.</div>
-      <div class="role">Creative Dev</div>
-      <div class="stats">
-        <div class="s"><div class="v">5+</div><div class="l">Proj</div></div>
-        <div class="s"><div class="v">3D</div><div class="l">Spec</div></div>
-        <div class="s"><div class="v">∞</div><div class="l">Curious</div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tags -->
-  <div class="layer depth-front-1"><div class="tag tag-live">⬤ LIVE</div></div>
-  <div class="layer depth-front-2"><div class="tag tag-three">THREE.js r160</div></div>
-
-  <!-- Particles -->
-  <div id="particles" style="position:absolute;inset:0;transform:translateZ(250px);transform-style:preserve-3d;pointer-events:none"></div>
-
-</div>
+<!-- DEPTH 0: Background -->
+<div class="layer bg-layer" data-speed="0.03">
+  <div class="wall"></div>
+  <div class="grid"></div>
+  <div class="pillar b"></div>
+  <div class="pillar p"></div>
 </div>
 
+<!-- DEPTH 1: Floor -->
+<div class="layer floor-layer" data-speed="0.06">
+  <div class="floor"></div>
+</div>
+
+<!-- DEPTH 6: Stats -->
+<div class="layer stats-layer" data-speed="0.08">
+  <div class="stats-bar">
+    <div class="si"><div class="v2" style="color:#5599ff">OFF-AXIS</div><div class="l2">PROJECTION</div></div>
+    <div class="si"><div class="v2" style="color:#44ddaa">REALTIME</div><div class="l2">TRACKING</div></div>
+    <div class="si"><div class="v2" style="color:#bb77ff">5 LAYERS</div><div class="l2">DEPTH</div></div>
+    <div class="si"><div class="v2" style="color:#ffaa44">60</div><div class="l2">FPS</div></div>
+  </div>
+</div>
+
+<!-- DEPTH 2: Main screen -->
+<div class="layer main-layer" data-speed="0.15">
+  <div class="screen">
+    <div class="nav"><div class="logo">fojcik.com</div><div class="links"><a>Work</a><a>About</a><a>Blog</a><a>Contact</a></div></div>
+    <h1>Hi, I'm Michal</h1>
+    <div class="sub">Creative Developer & 3D Enthusiast</div>
+    <div class="line"></div>
+    <div class="desc">I build interactive web experiences with Three.js, WebGL, and creative coding. This page uses head-coupled perspective — move your mouse to see the 3D depth effect.</div>
+    <div class="btns"><button class="btn btn-p">View Projects</button><button class="btn btn-g">Get in Touch</button></div>
+  </div>
+</div>
+
+<!-- DEPTH 3: Code card -->
+<div class="layer code-layer" data-speed="0.35">
+  <div class="code-card">
+    <div class="dots"><div class="dot c-r"></div><div class="dot c-y"></div><div class="dot c-g"></div></div>
+    <div class="fn">projection.js</div>
+    <div><span class="kw">function</span> <span class="fn2">shift</span><span class="op">(</span>eye<span class="op">)</span> <span class="op">{</span></div>
+    <div>&nbsp;&nbsp;<span class="cm">// window stays fixed</span></div>
+    <div>&nbsp;&nbsp;<span class="kw">var</span> hw = w <span class="op">/</span> <span class="nm">2</span><span class="op">;</span></div>
+    <div>&nbsp;&nbsp;left <span class="op">=</span> <span class="op">-(</span>hw<span class="op">+</span>eye.x<span class="op">)</span></div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">*</span> <span class="op">(</span>near<span class="op">/</span>d<span class="op">)</span><span class="op">;</span></div>
+    <div>&nbsp;&nbsp;right <span class="op">=</span> <span class="op">(</span>hw<span class="op">-</span>eye.x<span class="op">)</span></div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">*</span> <span class="op">(</span>near<span class="op">/</span>d<span class="op">)</span><span class="op">;</span></div>
+    <div>&nbsp;</div>
+    <div>&nbsp;&nbsp;proj<span class="op">.</span><span class="fn2">makePersp</span><span class="op">(</span></div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;left,right,top,bot</div>
+    <div>&nbsp;&nbsp;<span class="op">)</span><span class="op">;</span></div>
+    <div><span class="op">}</span></div>
+  </div>
+</div>
+
+<!-- DEPTH 4: Profile card -->
+<div class="layer profile-layer" data-speed="0.55">
+  <div class="profile-card">
+    <div class="avatar">M</div>
+    <div class="nm2">Michal F.</div>
+    <div class="role">Creative Dev</div>
+    <div class="pstats">
+      <div class="s"><div class="v">5+</div><div class="l">Proj</div></div>
+      <div class="s"><div class="v">3D</div><div class="l">Spec</div></div>
+      <div class="s"><div class="v">∞</div><div class="l">Curious</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DEPTH 5: Tags -->
+<div class="layer tag1-layer" data-speed="0.8">
+  <div class="tag tag-live">⬤ LIVE</div>
+</div>
+<div class="layer tag2-layer" data-speed="0.7">
+  <div class="tag tag-three">THREE.js r160</div>
+</div>
+
+<!-- DEPTH 7: Particles (layer with data-speed handled by JS) -->
+<div id="particle-layer" class="layer" data-speed="1.2" style="pointer-events:none;overflow:hidden"></div>
+
+<!-- HUD -->
 <div class="hud">
   <div class="pill" id="pill">🖱️ Mouse</div>
 </div>
@@ -309,22 +285,24 @@ body{
 <button class="cam-btn" id="cbtn" onclick="toggleCam()">📷 Camera</button>
 
 <script>
-var scene = document.getElementById('scene');
+var layers = document.querySelectorAll('.layer[data-speed]');
 var tx = 0, ty = 0, cx = 0, cy = 0;
 var mode = 'mouse';
 
 function tick() {
-  cx += (tx - cx) * 0.08;
-  cy += (ty - cy) * 0.08;
+  cx += (tx - cx) * 0.07;
+  cy += (ty - cy) * 0.07;
 
-  // THE KEY: rotate scene around center
-  // CSS perspective handles the rest
-  var ry = cx * 18;   // ±18 degrees
-  var rx = -cy * 12;  // ±12 degrees
+  // Each layer moves at its own speed — THIS creates depth
+  var maxX = window.innerWidth * 0.25;  // max pixel offset
+  var maxY = window.innerHeight * 0.2;
 
-  scene.style.transform =
-    'rotateY(' + ry + 'deg) ' +
-    'rotateX(' + rx + 'deg)';
+  for (var i = 0; i < layers.length; i++) {
+    var speed = parseFloat(layers[i].dataset.speed);
+    var dx = cx * maxX * speed;
+    var dy = cy * maxY * speed;
+    layers[i].style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+  }
 
   requestAnimationFrame(tick);
 }
@@ -342,12 +320,12 @@ document.addEventListener('touchmove', function(e) {
 
 // Particles
 !function() {
-  var c = document.getElementById('particles');
-  for (var i = 0; i < 30; i++) {
+  var c = document.getElementById('particle-layer');
+  for (var i = 0; i < 25; i++) {
     var p = document.createElement('div');
     p.className = 'particle';
     var sz = 2 + Math.random() * 3;
-    p.style.cssText = 'width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;background:hsla('+(200+Math.random()*60)+',60%,60%,0.35);animation-duration:'+(10+Math.random()*15)+'s;animation-delay:'+(-Math.random()*20)+'s;';
+    p.style.cssText = 'width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;background:hsla('+(200+Math.random()*60)+',50%,55%,0.3);animation-duration:'+(12+Math.random()*18)+'s;animation-delay:'+(-Math.random()*20)+'s;';
     c.appendChild(p);
   }
 }();

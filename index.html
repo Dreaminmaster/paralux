@@ -1,147 +1,523 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PARALUX — Head-Coupled 3D Web</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      overflow: hidden;
-      background: #0a0a1a;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    #canvas3d {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-    }
-    #ui-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      z-index: 10;
-      pointer-events: none;
-    }
-    #ui-bar .left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    #mode-pill {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 20px;
-      padding: 5px 14px;
-      color: rgba(255,255,255,0.6);
-      font-size: 12px;
-      backdrop-filter: blur(20px);
-    }
-    #depth-label {
-      color: rgba(255,255,255,0.3);
-      font-size: 11px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-    }
-    .right-controls {
-      display: flex;
-      gap: 8px;
-      pointer-events: auto;
-    }
-    .ctrl-btn {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 20px;
-      color: rgba(255,255,255,0.6);
-      padding: 5px 14px;
-      font-size: 12px;
-      cursor: pointer;
-      backdrop-filter: blur(20px);
-      transition: all 0.2s;
-    }
-    .ctrl-btn:hover {
-      background: rgba(255,255,255,0.12);
-      color: #fff;
-    }
-    .ctrl-btn.active {
-      background: rgba(100,200,255,0.12);
-      border-color: rgba(100,200,255,0.3);
-      color: #64c8ff;
-    }
-    #video-feed {
-      position: fixed;
-      bottom: 16px; right: 16px;
-      width: 140px; height: 105px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.15);
-      z-index: 10;
-      display: none;
-      object-fit: cover;
-      transform: scaleX(-1);
-      opacity: 0.85;
-    }
-    #loading {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 12px;
-      background: #0a0a1a;
-      z-index: 999;
-      transition: opacity 0.8s ease;
-    }
-    #loading.done { opacity: 0; pointer-events: none; }
-    #loading .spinner {
-      width: 32px; height: 32px;
-      border: 2px solid rgba(255,255,255,0.1);
-      border-top-color: rgba(100,200,255,0.6);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    #loading span {
-      color: rgba(255,255,255,0.35);
-      font-size: 12px;
-      letter-spacing: 2px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #info-hint {
-      position: fixed;
-      bottom: 16px; left: 16px;
-      color: rgba(255,255,255,0.25);
-      font-size: 11px;
-      z-index: 10;
-      pointer-events: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARALUX — 3D Web Depth</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  overflow:hidden;background:#070710;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  -webkit-font-smoothing:antialiased;
+  color:#fff;
+  height:100vh;width:100vw;
+}
+/* === THE SCENE — this is the magic === */
+.viewport{
+  position:fixed;inset:0;
+  perspective:800px;
+  perspective-origin:50% 50%;
+  overflow:hidden;
+}
+.scene{
+  position:absolute;
+  width:100%;height:100%;
+  transform-style:preserve-3d;
+  transition:transform 0.08s ease-out;
+}
+/* === LAYERS at different depths === */
+.layer{
+  position:absolute;
+  top:0;left:0;width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  transform-style:preserve-3d;
+  pointer-events:none;
+}
+.layer>*{pointer-events:auto}
+
+/* Background — z=-800px (far) */
+.l-bg{
+  transform:translateZ(-800px) scale(2);
+}
+.l-bg .wall{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(40,70,180,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 60%, rgba(140,50,200,0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #0a0a1a 0%, #060610 100%);
+}
+.l-bg .grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(60,100,200,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60,100,200,0.04) 1px, transparent 1px);
+  background-size:80px 80px;
+}
+
+/* Floor — z=-400px, tilted */
+.l-floor{
+  transform:translateZ(-400px) translateY(42%) rotateX(75deg) scale(1.8);
+}
+.l-floor .floor-surface{
+  width:200vw;height:200vh;
+  background:
+    linear-gradient(rgba(60,100,200,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60,100,200,0.03) 1px, transparent 1px);
+  background-size:60px 60px;
+  opacity:0.6;
+}
+
+/* Main screen — z=-200px */
+.l-main{
+  transform:translateZ(-200px) scale(1.25);
+}
+.screen-card{
+  width:min(90vw, 900px);
+  background:rgba(10,12,28,0.92);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:20px;
+  padding:40px 50px;
+  backdrop-filter:blur(20px);
+  box-shadow:
+    0 0 80px rgba(40,80,200,0.08),
+    0 30px 60px rgba(0,0,0,0.4);
+  position:relative;
+  overflow:hidden;
+}
+.screen-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(100,180,255,0.2), transparent);
+}
+.screen-card .nav{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:40px;
+}
+.screen-card .nav .logo{
+  font-size:20px;font-weight:700;letter-spacing:-0.5px;
+}
+.screen-card .nav .links{display:flex;gap:28px}
+.screen-card .nav .links a{
+  color:rgba(255,255,255,0.35);text-decoration:none;font-size:14px;
+  transition:color 0.2s;
+}
+.screen-card .nav .links a:hover{color:#fff}
+
+.screen-card h1{
+  font-size:clamp(32px,5vw,56px);font-weight:700;
+  line-height:1.15;margin-bottom:16px;
+}
+.screen-card .subtitle{
+  font-size:clamp(16px,2.5vw,22px);
+  color:rgba(255,255,255,0.35);margin-bottom:30px;
+}
+.screen-card .divider{
+  width:120px;height:2px;
+  background:linear-gradient(90deg, rgba(80,160,255,0.4), transparent);
+  margin-bottom:30px;
+}
+.screen-card .desc{
+  font-size:clamp(14px,2vw,18px);
+  color:rgba(255,255,255,0.25);
+  line-height:1.8;max-width:600px;margin-bottom:40px;
+}
+.btns{display:flex;gap:16px;flex-wrap:wrap}
+.btn{
+  padding:12px 28px;border-radius:25px;font-size:15px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;border:none;
+}
+.btn-primary{
+  background:rgba(80,160,255,0.12);color:#5599ff;
+  border:1px solid rgba(80,160,255,0.3);
+}
+.btn-primary:hover{background:rgba(80,160,255,0.2)}
+.btn-ghost{
+  background:rgba(255,255,255,0.03);color:rgba(255,255,255,0.5);
+  border:1px solid rgba(255,255,255,0.1);
+}
+.btn-ghost:hover{background:rgba(255,255,255,0.06)}
+
+/* Code card — left, z=-50px */
+.l-code{
+  transform:translateZ(-50px) translateX(-18%) translateY(-5%) scale(1.06);
+}
+.code-card{
+  width:min(38vw, 380px);
+  background:rgba(8,10,22,0.95);
+  border:1px solid rgba(255,255,255,0.05);
+  border-radius:16px;
+  padding:20px 24px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  font-family:'SF Mono','Fira Code','Consolas',monospace;
+  font-size:13px;line-height:1.9;
+  transform:rotateY(8deg);
+}
+.code-card .dots{display:flex;gap:8px;margin-bottom:16px}
+.code-card .dot{width:10px;height:10px;border-radius:50%}
+.code-card .dot.r{background:#ff5f56}
+.code-card .dot.y{background:#ffbd2e}
+.code-card .dot.g{background:#27c93f}
+.code-card .fname{color:rgba(255,255,255,0.2);margin-bottom:12px;font-size:12px}
+.c-kw{color:#c792ea}.c-fn{color:#82aaff}.c-str{color:#c3e88d}
+.c-num{color:#f78c6c}.c-cmt{color:#546e7a}.c-op{color:#89ddff}
+
+/* Profile card — right, z=50px (IN FRONT of screen!) */
+.l-profile{
+  transform:translateZ(50px) translateX(22%) translateY(5%) scale(0.94);
+}
+.profile-card{
+  width:min(26vw, 260px);
+  background:rgba(10,12,26,0.9);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:16px;
+  padding:30px;text-align:center;
+  box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  transform:rotateY(-10deg);
+}
+.avatar{
+  width:80px;height:80px;border-radius:50%;margin:0 auto 20px;
+  background:radial-gradient(circle at 35% 35%, #4488ff, #1a2a66, #0a0a33);
+  border:2px solid rgba(80,160,255,0.25);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;font-weight:700;color:rgba(255,255,255,0.8);
+}
+.profile-card .name{font-size:18px;font-weight:700;margin-bottom:6px}
+.profile-card .role{font-size:13px;color:rgba(255,255,255,0.3);margin-bottom:20px}
+.profile-stats{display:flex;justify-content:center;gap:24px}
+.profile-stats .stat .val{font-size:18px;font-weight:700;color:#5599ff}
+.profile-stats .stat .label{font-size:11px;color:rgba(255,255,255,0.2)}
+
+/* Tags — very near, z=150px */
+.l-tag1{
+  transform:translateZ(150px) translateX(38%) translateY(-35%) scale(0.82);
+}
+.l-tag2{
+  transform:translateZ(120px) translateX(-35%) translateY(-38%) scale(0.85);
+}
+.tag{
+  padding:8px 20px;border-radius:20px;font-size:13px;font-weight:600;
+  font-family:monospace;
+  backdrop-filter:blur(10px);
+  white-space:nowrap;
+}
+.tag-live{
+  background:rgba(0,0,0,0.5);
+  border:1px solid rgba(68,221,170,0.4);color:#44ddaa;
+}
+.tag-three{
+  background:rgba(0,0,0,0.5);
+  border:1px solid rgba(85,153,255,0.4);color:#5599ff;
+}
+
+/* Particles — z=200px, in front of everything */
+.l-particles{
+  transform:translateZ(200px) scale(0.75);
+}
+.particle{
+  position:absolute;border-radius:50%;
+  animation:float linear infinite;
+}
+@keyframes float{
+  0%{transform:translateY(0) translateX(0);opacity:0}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{transform:translateY(-100vh) translateX(50px);opacity:0}
+}
+
+/* Stats bar — z=-350px */
+.l-stats{
+  transform:translateZ(-350px) translateY(38%) scale(1.44);
+}
+.stats-bar{
+  display:flex;gap:40px;
+  background:rgba(8,10,22,0.85);
+  border:1px solid rgba(255,255,255,0.05);
+  border-radius:14px;
+  padding:18px 40px;
+  backdrop-filter:blur(10px);
+}
+.stats-bar .si .val{font-size:20px;font-weight:700}
+.stats-bar .si .label{font-size:11px;color:rgba(255,255,255,0.25);font-family:monospace}
+
+/* HUD */
+.hud{
+  position:fixed;top:16px;left:16px;z-index:100;
+  display:flex;align-items:center;gap:12px;
+}
+.hud .pill{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px;padding:5px 14px;font-size:12px;color:rgba(255,255,255,0.5);
+}
+.hud .hint{font-size:11px;color:rgba(255,255,255,0.2)}
+.cam-btn{
+  position:fixed;bottom:16px;right:16px;z-index:100;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px;padding:8px 18px;font-size:12px;color:rgba(255,255,255,0.5);
+  cursor:pointer;transition:all 0.2s;
+}
+.cam-btn:hover{background:rgba(255,255,255,0.1);color:#fff}
+.cam-btn.active{background:rgba(80,160,255,0.12);border-color:rgba(80,160,255,0.3);color:#5599ff}
+#vid{position:fixed;bottom:56px;right:16px;width:120px;height:90px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);display:none;z-index:100;transform:scaleX(-1);object-fit:cover}
+
+/* Wireframe shapes via CSS */
+.wire-shape{
+  position:absolute;
+  border:1px solid;
+  transform-style:preserve-3d;
+}
+.ico{
+  width:120px;height:120px;
+  border-color:rgba(34,68,170,0.25);
+  border-radius:50%;
+  left:8%;top:20%;
+  transform:translateZ(-500px) rotate3d(1,1,0,45deg);
+  animation:spin3d 20s linear infinite;
+}
+.dodec{
+  width:60px;height:60px;
+  border-color:rgba(255,102,68,0.3);
+  left:75%;top:65%;
+  transform:translateZ(100px) rotate3d(1,0,1,30deg);
+  animation:spin3d 15s linear infinite reverse;
+}
+@keyframes spin3d{
+  from{transform:translateZ(var(--tz,-500px)) rotate3d(1,1,0,0deg)}
+  to{transform:translateZ(var(--tz,-500px)) rotate3d(1,1,0,360deg)}
+}
+
+/* Light pillars */
+.pillar{
+  position:absolute;bottom:0;width:2px;height:100%;
+  opacity:0.15;
+}
+.pillar.b{background:linear-gradient(transparent, #4488ff, transparent);left:25%}
+.pillar.p{background:linear-gradient(transparent, #aa44ff, transparent);left:70%}
+.pillar.w{background:linear-gradient(transparent, rgba(255,255,255,0.3), transparent);left:50%}
+</style>
 </head>
 <body>
-  <div id="loading">
-    <div class="spinner"></div>
-    <span>INITIALIZING</span>
+
+<div class="viewport">
+<div class="scene" id="scene">
+
+  <!-- LAYER: Background (far: -800px) -->
+  <div class="layer l-bg">
+    <div class="wall"></div>
+    <div class="grid"></div>
+    <div class="pillar b"></div>
+    <div class="pillar p"></div>
+    <div class="pillar w"></div>
   </div>
 
-  <div id="ui-bar">
-    <div class="left">
-      <div id="mode-pill">🖱️ Mouse</div>
-      <div id="depth-label">depth: 5 layers · off-axis</div>
-    </div>
-    <div class="right-controls">
-      <button class="ctrl-btn" id="btn-grid" onclick="toggleGrid()">Grid</button>
-      <button class="ctrl-btn" id="btn-cam" onclick="toggleCamera()">📷 Camera</button>
+  <!-- LAYER: Floor (far: -400px, tilted) -->
+  <div class="layer l-floor">
+    <div class="floor-surface"></div>
+  </div>
+
+  <!-- LAYER: Stats bar (far: -350px) -->
+  <div class="layer l-stats">
+    <div class="stats-bar">
+      <div class="si"><div class="val" style="color:#5599ff">OFF-AXIS</div><div class="label">PROJECTION</div></div>
+      <div class="si"><div class="val" style="color:#44ddaa">REALTIME</div><div class="label">TRACKING</div></div>
+      <div class="si"><div class="val" style="color:#bb77ff">5 LAYERS</div><div class="label">DEPTH</div></div>
+      <div class="si"><div class="val" style="color:#ffaa44">60</div><div class="label">FPS</div></div>
     </div>
   </div>
 
-  <canvas id="canvas3d"></canvas>
-  <video id="video-feed" autoplay playsinline></video>
-  <div id="info-hint">move mouse to shift perspective</div>
+  <!-- LAYER: Main screen (-200px) -->
+  <div class="layer l-main">
+    <div class="screen-card">
+      <div class="nav">
+        <div class="logo">fojcik.com</div>
+        <div class="links">
+          <a href="#">Work</a><a href="#">About</a><a href="#">Blog</a><a href="#">Contact</a>
+        </div>
+      </div>
+      <h1>Hi, I'm Michal</h1>
+      <div class="subtitle">Creative Developer & 3D Enthusiast</div>
+      <div class="divider"></div>
+      <div class="desc">
+        I build interactive web experiences with Three.js, WebGL, and creative coding.
+        This page uses head-coupled perspective — move your mouse (or enable camera)
+        to see the 3D depth effect.
+      </div>
+      <div class="btns">
+        <button class="btn btn-primary">View Projects</button>
+        <button class="btn btn-ghost">Get in Touch</button>
+      </div>
+    </div>
+  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="main.js"></script>
+  <!-- LAYER: Code card (left, -50px) -->
+  <div class="layer l-code">
+    <div class="code-card">
+      <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+      <div class="fname">projection.js</div>
+      <div><span class="c-kw">function</span> <span class="c-fn">shiftPerspective</span><span class="c-op">(</span>eye<span class="c-op">)</span> <span class="c-op">{</span></div>
+      <div>&nbsp;&nbsp;<span class="c-cmt">// screen is a fixed window</span></div>
+      <div>&nbsp;&nbsp;<span class="c-kw">var</span> hw = screenW <span class="c-op">/</span> <span class="c-num">2</span><span class="c-op">;</span></div>
+      <div>&nbsp;&nbsp;<span class="c-kw">var</span> d = eyeDistance<span class="c-op">;</span></div>
+      <div>&nbsp;</div>
+      <div>&nbsp;&nbsp;left = <span class="c-op">-(</span>hw <span class="c-op">+</span> eye.x<span class="c-op">)</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-op">*</span> <span class="c-op">(</span>near <span class="c-op">/</span> d<span class="c-op">)</span><span class="c-op">;</span></div>
+      <div>&nbsp;&nbsp;right = <span class="c-op">(</span>hw <span class="c-op">-</span> eye.x<span class="c-op">)</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-op">*</span> <span class="c-op">(</span>near <span class="c-op">/</span> d<span class="c-op">)</span><span class="c-op">;</span></div>
+      <div>&nbsp;</div>
+      <div>&nbsp;&nbsp;projMatrix<span class="c-op">.</span><span class="c-fn">makePerspective</span><span class="c-op">(</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;left, right, top, bottom</div>
+      <div>&nbsp;&nbsp;<span class="c-op">)</span><span class="c-op">;</span></div>
+      <div><span class="c-op">}</span></div>
+    </div>
+  </div>
+
+  <!-- LAYER: Profile card (right, +50px — IN FRONT!) -->
+  <div class="layer l-profile">
+    <div class="profile-card">
+      <div class="avatar">M</div>
+      <div class="name">Michal Fojcik</div>
+      <div class="role">Creative Developer</div>
+      <div class="profile-stats">
+        <div class="stat"><div class="val">5+</div><div class="label">Projects</div></div>
+        <div class="stat"><div class="val">3D</div><div class="label">Specialist</div></div>
+        <div class="stat"><div class="val">∞</div><div class="label">Curious</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYER: Tags (very near: +120~150px) -->
+  <div class="layer l-tag1">
+    <div class="tag tag-live">⬤ LIVE TRACKING</div>
+  </div>
+  <div class="layer l-tag2">
+    <div class="tag tag-three">THREE.js r160</div>
+  </div>
+
+  <!-- LAYER: Particles (front: +200px) -->
+  <div class="layer l-particles" id="particles"></div>
+
+</div>
+</div>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="pill" id="mode-pill">🖱️ Mouse</div>
+  <div class="hint">move to explore</div>
+</div>
+<video id="vid" autoplay playsinline></video>
+<button class="cam-btn" id="cam-btn" onclick="toggleCam()">📷 Camera</button>
+
+<script>
+// === CORE: Move the scene based on mouse/touch ===
+var scene = document.getElementById('scene');
+var vp = document.querySelector('.viewport');
+var targetX = 0, targetY = 0;
+var curX = 0, curY = 0;
+var mode = 'mouse';
+
+// The key: rotate the scene AND shift perspective-origin
+// This creates the "looking through a window" effect
+function updateScene() {
+  curX += (targetX - curX) * 0.08;
+  curY += (targetY - curY) * 0.08;
+
+  // Rotate scene — this is what creates 3D depth with CSS perspective
+  var rotY = curX * 12;  // degrees
+  var rotX = -curY * 8;
+  var transX = curX * -30; // px — subtle shift opposite to rotation
+  var transY = curY * -20;
+
+  scene.style.transform =
+    'translateX(' + transX + 'px) ' +
+    'translateY(' + transY + 'px) ' +
+    'rotateY(' + rotY + 'deg) ' +
+    'rotateX(' + rotX + 'deg)';
+
+  requestAnimationFrame(updateScene);
+}
+
+document.addEventListener('mousemove', function(e) {
+  if (mode !== 'mouse') return;
+  targetX = (e.clientX / window.innerWidth - 0.5) * 2;
+  targetY = (e.clientY / window.innerHeight - 0.5) * 2;
+});
+
+document.addEventListener('touchmove', function(e) {
+  if (mode !== 'mouse') return;
+  var t = e.touches[0];
+  targetX = (t.clientX / window.innerWidth - 0.5) * 2;
+  targetY = (t.clientY / window.innerHeight - 0.5) * 2;
+}, { passive: true });
+
+// === PARTICLES ===
+(function() {
+  var container = document.getElementById('particles');
+  for (var i = 0; i < 40; i++) {
+    var p = document.createElement('div');
+    p.className = 'particle';
+    var size = 2 + Math.random() * 4;
+    var hue = 200 + Math.random() * 60;
+    p.style.cssText =
+      'width:' + size + 'px;height:' + size + 'px;' +
+      'left:' + (Math.random()*100) + '%;' +
+      'top:' + (Math.random()*100) + '%;' +
+      'background:hsla(' + hue + ',60%,60%,0.4);' +
+      'animation-duration:' + (8 + Math.random()*12) + 's;' +
+      'animation-delay:' + (-Math.random()*20) + 's;';
+    container.appendChild(p);
+  }
+})();
+
+// === CAMERA (MediaPipe) ===
+function toggleCam() {
+  var btn = document.getElementById('cam-btn');
+  var vid = document.getElementById('vid');
+  var pill = document.getElementById('mode-pill');
+
+  if (mode === 'camera') {
+    mode = 'mouse';
+    btn.classList.remove('active'); btn.textContent = '📷 Camera';
+    vid.style.display = 'none'; pill.textContent = '🖱️ Mouse';
+    if (vid.srcObject) { vid.srcObject.getTracks().forEach(function(t){t.stop();}); vid.srcObject = null; }
+    return;
+  }
+
+  btn.textContent = '⏳ Loading...';
+  var s = document.createElement('script'); s.type = 'module';
+  s.textContent = "import {FaceLandmarker,FilesetResolver} from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';" +
+    "try{" +
+    "const fs=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm');" +
+    "const fl=await FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numFaces:1});" +
+    "window._fl=fl;window._startCam();" +
+    "}catch(e){document.getElementById('cam-btn').textContent='📷 Camera';alert('MediaPipe: '+e.message);}";
+  document.body.appendChild(s);
+}
+
+window._startCam = function() {
+  var btn = document.getElementById('cam-btn');
+  var vid = document.getElementById('vid');
+  var pill = document.getElementById('mode-pill');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:320,height:240}})
+  .then(function(stream) {
+    vid.srcObject = stream; vid.style.display = 'block'; vid.play();
+    mode = 'camera'; btn.classList.add('active'); btn.textContent = '🛑 Stop'; pill.textContent = '📷 Camera';
+    (function loop() {
+      if (mode !== 'camera') return;
+      if (window._fl && vid.readyState >= 2) {
+        var r = window._fl.detectForVideo(vid, performance.now());
+        if (r.faceLandmarks && r.faceLandmarks.length) {
+          var n = r.faceLandmarks[0][1];
+          targetX = -(n.x - 0.5) * 3;
+          targetY = -(n.y - 0.5) * 3;
+        }
+      }
+      requestAnimationFrame(loop);
+    })();
+  })
+  .catch(function(e) { btn.textContent = '📷 Camera'; alert('Camera: '+e.message); });
+};
+
+// === START ===
+updateScene();
+</script>
 </body>
 </html>

@@ -3,107 +3,144 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Head-Tracked Parallax</title>
+  <title>PARALUX — Head-Coupled 3D Web</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       overflow: hidden;
       background: #0a0a1a;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
     #canvas3d {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
     }
-    #ui-overlay {
+    #ui-bar {
       position: fixed;
-      top: 20px; left: 20px;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
       z-index: 10;
-      color: rgba(255,255,255,0.7);
-      font-size: 13px;
       pointer-events: none;
     }
-    #ui-overlay .mode-tag {
-      display: inline-block;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
+    #ui-bar .left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #mode-pill {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
       border-radius: 20px;
-      padding: 6px 14px;
-      margin-bottom: 8px;
-      backdrop-filter: blur(10px);
-    }
-    #ui-overlay .hint {
-      opacity: 0.5;
+      padding: 5px 14px;
+      color: rgba(255,255,255,0.6);
       font-size: 12px;
-      margin-top: 4px;
+      backdrop-filter: blur(20px);
     }
-    #cam-btn {
-      position: fixed;
-      bottom: 20px; right: 20px;
-      z-index: 10;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 25px;
-      color: rgba(255,255,255,0.7);
-      padding: 10px 20px;
-      font-size: 13px;
+    #depth-label {
+      color: rgba(255,255,255,0.3);
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .right-controls {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+    .ctrl-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      color: rgba(255,255,255,0.6);
+      padding: 5px 14px;
+      font-size: 12px;
       cursor: pointer;
-      backdrop-filter: blur(10px);
-      transition: all 0.3s;
+      backdrop-filter: blur(20px);
+      transition: all 0.2s;
     }
-    #cam-btn:hover {
-      background: rgba(255,255,255,0.15);
+    .ctrl-btn:hover {
+      background: rgba(255,255,255,0.12);
       color: #fff;
     }
-    #cam-btn.active {
-      background: rgba(100,200,255,0.15);
-      border-color: rgba(100,200,255,0.4);
+    .ctrl-btn.active {
+      background: rgba(100,200,255,0.12);
+      border-color: rgba(100,200,255,0.3);
       color: #64c8ff;
     }
     #video-feed {
       position: fixed;
-      bottom: 70px; right: 20px;
-      width: 160px; height: 120px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.2);
+      bottom: 16px; right: 16px;
+      width: 140px; height: 105px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
       z-index: 10;
       display: none;
       object-fit: cover;
       transform: scaleX(-1);
+      opacity: 0.85;
     }
     #loading {
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-direction: column;
+      gap: 12px;
       background: #0a0a1a;
       z-index: 999;
-      transition: opacity 0.8s;
+      transition: opacity 0.8s ease;
     }
-    #loading.hide { opacity: 0; pointer-events: none; }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #loading .spinner {
+      width: 32px; height: 32px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top-color: rgba(100,200,255,0.6);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
     #loading span {
-      color: rgba(255,255,255,0.5);
-      font-size: 14px;
-      letter-spacing: 3px;
+      color: rgba(255,255,255,0.35);
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #info-hint {
+      position: fixed;
+      bottom: 16px; left: 16px;
+      color: rgba(255,255,255,0.25);
+      font-size: 11px;
+      z-index: 10;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <div id="loading"><span>LOADING...</span></div>
+  <div id="loading">
+    <div class="spinner"></div>
+    <span>INITIALIZING</span>
+  </div>
 
-  <div id="ui-overlay">
-    <div class="mode-tag" id="mode-tag">🖱️ 鼠标视差模式</div>
-    <div class="hint">移动鼠标探索 3D 空间</div>
+  <div id="ui-bar">
+    <div class="left">
+      <div id="mode-pill">🖱️ Mouse</div>
+      <div id="depth-label">depth: 5 layers · off-axis</div>
+    </div>
+    <div class="right-controls">
+      <button class="ctrl-btn" id="btn-grid" onclick="toggleGrid()">Grid</button>
+      <button class="ctrl-btn" id="btn-cam" onclick="toggleCamera()">📷 Camera</button>
+    </div>
   </div>
 
   <canvas id="canvas3d"></canvas>
   <video id="video-feed" autoplay playsinline></video>
-  <button id="cam-btn" onclick="toggleCamera()">📷 开启摄像头追踪</button>
+  <div id="info-hint">move mouse to shift perspective</div>
 
-  <!-- Three.js via CDN (global) -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="main.js"></script>
 </body>

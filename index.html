@@ -118,6 +118,10 @@ body{
   font-family:'SF Mono','Fira Code',monospace;
   font-size:10px;line-height:1.8;
   box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  display:none;
+}
+@media(min-width:768px){
+  .code-card{display:block}
 }
 /* Right edge — visible side */
 .code-card::after{
@@ -145,6 +149,10 @@ body{
   border-radius:14px;
   padding:18px;text-align:center;
   box-shadow:0 20px 50px rgba(0,0,0,0.5);
+  display:none;
+}
+@media(min-width:768px){
+  .profile-card{display:block}
 }
 /* Left edge — visible side */
 .profile-card::after{
